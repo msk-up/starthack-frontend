@@ -34,8 +34,27 @@ export default function OrchestrationVisual({
   const [showToneSelector, setShowToneSelector] = useState(false);
   const [researchingSuppliers, setResearchingSuppliers] = useState<Set<string>>(new Set());
   const [supplierStates, setSupplierStates] = useState<Record<string, { unreadCount: number; hasOutcome: boolean }>>({});
+  const [selectedModes, setSelectedModes] = useState<Set<string>>(new Set());
   const animationStarted = useRef(false);
   const hasInitiatedNegotiation = useRef(false);
+
+  const modes = [
+    { id: 'aggressive', label: 'Aggressive' },
+    { id: 'competitive', label: 'Competitive' },
+    { id: 'collaborative', label: 'Collaborative' }
+  ];
+
+  const toggleMode = (modeId: string) => {
+    setSelectedModes(prev => {
+      const next = new Set(prev);
+      if (next.has(modeId)) {
+        next.delete(modeId);
+      } else {
+        next.add(modeId);
+      }
+      return next;
+    });
+  };
 
   // Initialize supplier states with mock data
   useEffect(() => {
@@ -78,6 +97,7 @@ export default function OrchestrationVisual({
 
   const handleToneSelectionComplete = (selectedTones: string[]) => {
     console.log('Selected tones:', selectedTones);
+    console.log('Selected modes:', Array.from(selectedModes));
     setShowToneSelector(false);
     hasInitiatedNegotiation.current = true;
     
@@ -98,8 +118,12 @@ export default function OrchestrationVisual({
     });
     
     // Trigger the actual processing after a short delay
+    // Include selected modes in the prompt or pass separately
+    const promptWithModes = selectedModes.size > 0 
+      ? `${prompt}\n\nModes: ${Array.from(selectedModes).join(', ')}`
+      : prompt;
     setTimeout(() => {
-      onPromptSubmit(prompt);
+      onPromptSubmit(promptWithModes);
     }, 500);
   };
 
@@ -168,6 +192,27 @@ export default function OrchestrationVisual({
                   className="min-h-[140px] resize-none border focus:border-foreground"
                   disabled={isProcessing || hasInitiatedNegotiation.current}
                 />
+                
+                {/* Mode Selection Buttons */}
+                <div className="flex flex-wrap gap-2 justify-center">
+                  {modes.map((mode) => (
+                    <Button
+                      key={mode.id}
+                      type="button"
+                      variant={selectedModes.has(mode.id) ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => toggleMode(mode.id)}
+                      disabled={isProcessing || hasInitiatedNegotiation.current}
+                      className={cn(
+                        "text-xs",
+                        selectedModes.has(mode.id) && "bg-foreground text-background"
+                      )}
+                    >
+                      {mode.label}
+                    </Button>
+                  ))}
+                </div>
+
                 <div className="flex items-center justify-between pt-1">
                   <p className="text-xs text-muted-foreground">
                     Cmd + Enter to send
