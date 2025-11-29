@@ -52,15 +52,10 @@ export default function ComparePage() {
         <div className="container mx-auto px-6 py-5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <Button variant="glass" size="icon" onClick={() => navigate(-1)}>
+              <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
                 <ArrowLeft className="h-5 w-5" />
               </Button>
-              <div className="flex items-center gap-3">
-                <div className="rounded-xl bg-gradient-to-br from-primary to-secondary p-2 shadow-lg glow-primary">
-                  <TrendingUp className="h-5 w-5 text-white" />
-                </div>
-                <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">Compare Offers</h1>
-              </div>
+              <h1 className="text-2xl font-semibold tracking-tight">Compare Offers</h1>
             </div>
             {!winner && remainingOffers.length > 0 && (
               <Badge className="px-4 py-2 text-sm font-semibold rounded-full bg-primary/10 text-primary border-primary/20">
@@ -108,7 +103,7 @@ export default function ComparePage() {
               </div>
             </Card>
 
-            <Button size="lg" variant="gradient" onClick={handleFinish} className="px-12 text-base shadow-2xl">
+            <Button size="lg" variant="default" onClick={handleFinish} className="px-12 text-base">
               Return to Dashboard
             </Button>
           </div>
@@ -155,7 +150,7 @@ export default function ComparePage() {
                     <p className="text-base leading-relaxed">{offer.summary}</p>
                   </div>
 
-                  <Button className="mt-4 w-full" variant="glassPrimary" size="lg">
+                  <Button className="mt-4 w-full" variant="default" size="lg">
                     Select This Offer
                   </Button>
                 </Card>
@@ -166,7 +161,7 @@ export default function ComparePage() {
           // Loading/Error State
           <div className="text-center">
             <p className="text-xl text-muted-foreground mb-6">No offers available for comparison</p>
-            <Button className="mt-4" variant="gradient" size="lg" onClick={() => navigate('/')}>
+            <Button className="mt-4" variant="default" size="lg" onClick={() => navigate('/')}>
               Go to Search
             </Button>
           </div>

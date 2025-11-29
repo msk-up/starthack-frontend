@@ -36,7 +36,7 @@ export default function SupplierDetailPage() {
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Card className="glass p-12 text-center">
           <h2 className="text-2xl font-bold mb-4">Supplier Not Found</h2>
-          <Button onClick={() => navigate(-1)} variant="glassPrimary">
+          <Button onClick={() => navigate(-1)} variant="default">
             Go Back
           </Button>
         </Card>
@@ -51,17 +51,10 @@ export default function SupplierDetailPage() {
         <div className="container mx-auto px-6 py-5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <Button variant="glass" size="icon" onClick={() => navigate(-1)}>
+              <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
                 <ArrowLeft className="h-5 w-5" />
               </Button>
-              <div className="flex items-center gap-3">
-                <div className="rounded-xl bg-gradient-to-br from-primary to-secondary p-2 shadow-lg glow-primary">
-                  <MessageSquare className="h-5 w-5 text-white" />
-                </div>
-                <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-                  Supplier Details
-                </h1>
-              </div>
+              <h1 className="text-2xl font-semibold tracking-tight">Supplier Details</h1>
             </div>
           </div>
         </div>
@@ -154,14 +147,14 @@ export default function SupplierDetailPage() {
                 <Button 
                   onClick={() => navigate('/compare')} 
                   className="flex-1" 
-                  variant="glassPrimary" 
+                  variant="default" 
                   size="lg"
                 >
                   Add to Comparison
                 </Button>
                 <Button 
                   onClick={() => navigate(-1)} 
-                  variant="glass" 
+                  variant="outline" 
                   size="lg"
                 >
                   Back to Dashboard
