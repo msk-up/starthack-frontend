@@ -90,7 +90,8 @@ export default function NegotiationPage() {
 
       <div className="container mx-auto flex gap-6 p-6">
         {/* Left Panel - Suppliers by Category */}
-        <div className="w-96 shrink-0">
+        <div className="w-96 shrink-0 space-y-6">
+          {/* Product Categories Section */}
           <Card className="glass sticky top-24 p-6 rounded-2xl shadow-2xl">
             <h3 className="mb-6 text-lg font-bold">Product Categories</h3>
             <Tabs value={activeCategory} onValueChange={(v) => setActiveCategory(v as ProductCategory)}>
@@ -112,42 +113,43 @@ export default function NegotiationPage() {
                 })}
               </TabsList>
             </Tabs>
+          </Card>
 
-            <div className="mt-8 space-y-3">
-              <h4 className="text-sm font-bold text-muted-foreground uppercase tracking-wide">
-                {CATEGORIES.find((c) => c.value === activeCategory)?.label} Suppliers
-              </h4>
-              <ScrollArea className="h-[500px]">
-                <div className="space-y-3 pr-4">
-                  {categorizedSuppliers.map((supplier) => {
-                    const conv = mockConversations.find((c) => c.supplierId === supplier.id);
-                    return (
-                      <button
-                        key={supplier.id}
-                        onClick={() => setSelectedSupplier(supplier.id)}
-                        className={cn(
-                          'w-full rounded-xl border-2 p-4 text-left transition-all hover:scale-[1.02]',
-                          selectedSupplier === supplier.id 
-                            ? 'border-primary bg-primary/10 shadow-lg shadow-primary/20' 
-                            : 'border-border glass hover:border-primary/40'
-                        )}
-                      >
-                        <div className="mb-3 flex items-start justify-between">
-                          <p className="font-bold text-base">{supplier.name}</p>
-                          {conv && getStatusIcon(conv.status)}
-                        </div>
-                        {conv && (
-                          <>
-                            <p className="mb-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">{getStatusLabel(conv.status)}</p>
-                            <Progress value={conv.progress} className="h-2" />
-                          </>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-              </ScrollArea>
-            </div>
+          {/* Suppliers List Section */}
+          <Card className="glass p-6 rounded-2xl shadow-2xl">
+            <h4 className="mb-4 text-sm font-bold text-muted-foreground uppercase tracking-wide">
+              {CATEGORIES.find((c) => c.value === activeCategory)?.label} Suppliers
+            </h4>
+            <ScrollArea className="h-[500px]">
+              <div className="space-y-3 pr-4">
+                {categorizedSuppliers.map((supplier) => {
+                  const conv = mockConversations.find((c) => c.supplierId === supplier.id);
+                  return (
+                    <button
+                      key={supplier.id}
+                      onClick={() => setSelectedSupplier(supplier.id)}
+                      className={cn(
+                        'w-full rounded-xl border-2 p-4 text-left transition-all hover:scale-[1.02]',
+                        selectedSupplier === supplier.id 
+                          ? 'border-primary bg-primary/10 shadow-lg shadow-primary/20' 
+                          : 'border-border glass hover:border-primary/40'
+                      )}
+                    >
+                      <div className="mb-3 flex items-start justify-between">
+                        <p className="font-bold text-base">{supplier.name}</p>
+                        {conv && getStatusIcon(conv.status)}
+                      </div>
+                      {conv && (
+                        <>
+                          <p className="mb-3 text-xs font-semibold text-muted-foreground uppercase tracking-wide">{getStatusLabel(conv.status)}</p>
+                          <Progress value={conv.progress} className="h-2" />
+                        </>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            </ScrollArea>
           </Card>
         </div>
 
