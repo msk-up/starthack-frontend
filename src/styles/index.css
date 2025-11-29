@@ -2,6 +2,15 @@
 @tailwind components;
 @tailwind utilities;
 
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(400%);
+  }
+}
+
 /* Font Definitions */
 @font-face {
   font-family: 'Apple Garamond';
@@ -28,7 +37,7 @@
     --muted-foreground: 0 0% 45%;
     --accent: 0 0% 96%;
     --accent-foreground: 0 0% 9%;
-    --destructive: 0 0% 45%;
+    --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 98%;
     --border: 0 0% 90%;
     --input: 0 0% 90%;
@@ -60,8 +69,8 @@
     --muted-foreground: 0 0% 63%;
     --accent: 0 0% 14%;
     --accent-foreground: 0 0% 98%;
-    --destructive: 0 0% 63%;
-    --destructive-foreground: 0 0% 9%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
     --border: 0 0% 20%;
     --input: 0 0% 20%;
     --ring: 0 0% 83%;
