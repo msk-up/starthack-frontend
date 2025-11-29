@@ -55,7 +55,6 @@ export default function OrchestrationVisual({
   const handleSubmit = () => {
     if (prompt.trim() && !isProcessing) {
       onPromptSubmit(prompt);
-      setPrompt('');
     }
   };
 
