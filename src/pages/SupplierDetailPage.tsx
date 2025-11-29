@@ -125,7 +125,7 @@ export default function SupplierDetailPage() {
               <div className="mb-8 space-y-4">
                 <div className="flex justify-between items-baseline rounded-2xl bg-primary/5 p-6">
                   <span className="text-muted-foreground font-semibold text-lg">Price</span>
-                  <span className="text-4xl font-black bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+                  <span className="text-4xl font-black text-foreground">
                     ${offer.price.toLocaleString()}
                   </span>
                 </div>

@@ -45,7 +45,7 @@ export default function SearchPage() {
               <div className="rounded-xl bg-gradient-to-br from-primary to-secondary p-2 shadow-lg glow-primary">
                 <TrendingUp className="h-5 w-5 text-white" />
               </div>
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">ProcureAI</h1>
+              <h1 className="text-2xl font-bold text-foreground">ProcureAI</h1>
             </div>
             <Badge variant="secondary" className="px-4 py-1.5 text-xs font-semibold rounded-full bg-primary/10 text-primary border-primary/20">
               Beta
@@ -57,7 +57,7 @@ export default function SearchPage() {
       {/* Hero Section */}
       <section className="container mx-auto px-6 py-20 text-center">
         <div className="animate-float mb-6">
-          <h2 className="mb-6 text-5xl font-bold tracking-tight bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
+          <h2 className="mb-6 text-5xl font-bold tracking-tight text-foreground">
             Find the Best Suppliers
           </h2>
         </div>
