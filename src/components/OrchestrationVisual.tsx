@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Zap, CheckCircle, Clock, AlertCircle, MessageSquare, Send, Sparkles } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -28,6 +28,29 @@ export default function OrchestrationVisual({
   onPromptSubmit
 }: OrchestrationVisualProps) {
   const [prompt, setPrompt] = useState('');
+  const [animatingIndex, setAnimatingIndex] = useState<number | null>(null);
+  const animationStarted = useRef(false);
+
+  useEffect(() => {
+    if (isProcessing && !animationStarted.current) {
+      animationStarted.current = true;
+      let currentIndex = 0;
+      
+      const animate = () => {
+        if (currentIndex < suppliers.length) {
+          setAnimatingIndex(currentIndex);
+          currentIndex++;
+          setTimeout(animate, 400);
+        } else {
+          setAnimatingIndex(null);
+        }
+      };
+      
+      animate();
+    } else if (!isProcessing) {
+      animationStarted.current = false;
+    }
+  }, [isProcessing, suppliers.length]);
 
   const handleSubmit = () => {
     if (prompt.trim() && !isProcessing) {
@@ -128,6 +151,7 @@ export default function OrchestrationVisual({
         {suppliers.map((_, index) => {
           const yStart = (suppliers.length * 120) / 2;
           const yEnd = (index * 120) + 60;
+          const isAnimating = animatingIndex === index;
           
           return (
             <svg
@@ -141,9 +165,10 @@ export default function OrchestrationVisual({
                 y1={yStart}
                 x2="100"
                 y2={yEnd}
-                stroke="hsl(var(--border))"
-                strokeWidth="1"
+                stroke={isAnimating ? "hsl(var(--foreground))" : "hsl(var(--border))"}
+                strokeWidth={isAnimating ? "2" : "1"}
                 strokeDasharray="4,4"
+                className="transition-all duration-300"
               />
             </svg>
           );
@@ -154,6 +179,8 @@ export default function OrchestrationVisual({
       <div className="flex-1 min-w-0 max-w-2xl">
         <div className="space-y-4">
           {suppliers.map((supplier, index) => {
+            const isAnimating = animatingIndex === index;
+            
             return (
               <button
                 key={supplier.id}
@@ -161,7 +188,10 @@ export default function OrchestrationVisual({
                 className="relative group text-left transition-all duration-200 w-full block"
                 style={{ height: '112px' }}
               >
-                <Card className="border bg-card transition-all duration-200 hover:border-foreground h-full flex items-center relative">
+                <Card className={cn(
+                  "border bg-card transition-all duration-200 hover:border-foreground h-full flex items-center relative",
+                  isAnimating && "border-foreground"
+                )}>
                   {/* New Update Indicator - Subtle dot */}
                   {supplier.hasNewUpdate && (
                     <div className="absolute top-3 right-3">
