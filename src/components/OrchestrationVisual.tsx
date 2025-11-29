@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { MessageSquare, Zap, CheckCircle, Clock, AlertCircle } from 'lucide-react';
+import { Zap, CheckCircle, Clock, AlertCircle, MessageSquare } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
@@ -23,19 +23,20 @@ export default function OrchestrationVisual({
   onSupplierClick,
   isProcessing 
 }: OrchestrationVisualProps) {
-  const [pulseAgents, setPulseAgents] = useState<Set<string>>(new Set());
+  const [activeConnection, setActiveConnection] = useState<number | null>(null);
 
   useEffect(() => {
     if (isProcessing) {
+      let currentIndex = 0;
       const interval = setInterval(() => {
-        const randomSupplier = suppliers[Math.floor(Math.random() * suppliers.length)];
-        setPulseAgents(new Set([randomSupplier.id]));
-      }, 1500);
+        setActiveConnection(currentIndex % suppliers.length);
+        currentIndex++;
+      }, 800);
       return () => clearInterval(interval);
     } else {
-      setPulseAgents(new Set());
+      setActiveConnection(null);
     }
-  }, [isProcessing, suppliers]);
+  }, [isProcessing, suppliers.length]);
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -64,22 +65,22 @@ export default function OrchestrationVisual({
   };
 
   return (
-    <div className="relative w-full">
-      {/* Orchestration Agent - Center */}
-      <div className="flex justify-center mb-12">
+    <div className="flex items-center justify-center gap-12 py-8">
+      {/* Orchestration Agent - Left Side */}
+      <div className="flex-shrink-0">
         <Card className={cn(
-          "glass p-6 rounded-2xl shadow-2xl border-2 transition-all duration-300",
-          isProcessing ? "border-primary glow-primary scale-105" : "border-border"
+          "glass p-8 rounded-2xl shadow-2xl border-2 transition-all duration-300 w-80",
+          isProcessing ? "border-primary glow-primary" : "border-border"
         )}>
-          <div className="flex items-center gap-4">
+          <div className="flex flex-col items-center gap-4">
             <div className={cn(
-              "rounded-xl bg-gradient-to-br from-primary to-secondary p-3",
+              "rounded-2xl bg-gradient-to-br from-primary to-secondary p-4",
               isProcessing && "animate-pulse"
             )}>
-              <Zap className="h-6 w-6 text-white" />
+              <Zap className="h-8 w-8 text-white" />
             </div>
-            <div>
-              <h3 className="font-bold text-lg">Orchestration Agent</h3>
+            <div className="text-center">
+              <h3 className="font-bold text-xl mb-1">Orchestration Agent</h3>
               <p className="text-sm text-muted-foreground">
                 {isProcessing ? 'Distributing tasks...' : 'Ready'}
               </p>
@@ -88,15 +89,46 @@ export default function OrchestrationVisual({
         </Card>
       </div>
 
-      {/* Connection Lines */}
-      {isProcessing && (
-        <div className="absolute top-24 left-1/2 -translate-x-1/2 w-px h-16 bg-gradient-to-b from-primary/50 to-transparent" />
-      )}
+      {/* Connection Lines Container */}
+      <div className="relative flex-shrink-0" style={{ width: '120px', height: '500px' }}>
+        {suppliers.map((_, index) => {
+          const isActive = activeConnection === index;
+          const yPosition = (index * (500 / suppliers.length)) + (500 / suppliers.length / 2);
+          
+          return (
+            <svg
+              key={index}
+              className="absolute top-0 left-0 w-full h-full pointer-events-none"
+              style={{ zIndex: isActive ? 10 : 1 }}
+            >
+              <line
+                x1="0"
+                y1="250"
+                x2="120"
+                y2={yPosition}
+                stroke={isActive ? "hsl(var(--primary))" : "hsl(var(--border))"}
+                strokeWidth={isActive ? "3" : "2"}
+                strokeDasharray={isActive ? "0" : "5,5"}
+                className={cn(
+                  "transition-all duration-300",
+                  isActive && "animate-pulse"
+                )}
+              />
+              {isActive && (
+                <circle cx="120" cy={yPosition} r="4" fill="hsl(var(--primary))">
+                  <animate attributeName="r" from="4" to="8" dur="0.6s" repeatCount="indefinite" />
+                  <animate attributeName="opacity" from="1" to="0" dur="0.6s" repeatCount="indefinite" />
+                </circle>
+              )}
+            </svg>
+          );
+        })}
+      </div>
 
-      {/* Supplier Seats Grid */}
-      <div className="grid grid-cols-2 gap-6 max-w-4xl mx-auto">
+      {/* Supplier Seats - Right Side (Stacked Vertically) */}
+      <div className="flex flex-col gap-4 flex-shrink-0 w-96">
         {suppliers.map((supplier, index) => {
-          const isPulsing = pulseAgents.has(supplier.id);
+          const isActive = activeConnection === index;
           
           return (
             <button
@@ -108,14 +140,14 @@ export default function OrchestrationVisual({
               )}
             >
               <Card className={cn(
-                "glass p-6 rounded-2xl border-2 transition-all duration-300 hover:scale-105 hover:shadow-2xl",
+                "glass p-5 rounded-xl border-2 transition-all duration-300 hover:scale-[1.02] hover:shadow-xl",
                 getStatusColor(supplier.status),
-                isPulsing && "ring-2 ring-primary ring-offset-2",
+                isActive && "ring-2 ring-primary ring-offset-2 border-primary",
                 supplier.hasNewUpdate && "border-primary shadow-primary/20"
               )}>
                 {/* New Update Indicator */}
                 {supplier.hasNewUpdate && (
-                  <div className="absolute -top-2 -right-2">
+                  <div className="absolute -top-2 -right-2 z-10">
                     <Badge className="bg-primary text-white border-0 rounded-full px-3 py-1 shadow-lg animate-bounce">
                       New
                     </Badge>
@@ -123,12 +155,12 @@ export default function OrchestrationVisual({
                 )}
 
                 {/* Agent Seat Label */}
-                <div className="absolute -top-3 -left-3 w-8 h-8 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-white font-bold text-sm shadow-lg">
+                <div className="absolute -left-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-white font-bold shadow-lg">
                   {String.fromCharCode(65 + index)}
                 </div>
 
-                <div className="flex items-start justify-between mb-4">
-                  <div>
+                <div className="pl-6 flex items-center justify-between">
+                  <div className="flex-1">
                     <h4 className="font-bold text-base mb-1">{supplier.name}</h4>
                     {supplier.lastUpdate && (
                       <p className="text-xs text-muted-foreground">
@@ -140,7 +172,7 @@ export default function OrchestrationVisual({
                 </div>
 
                 {/* Status Bar */}
-                <div className="w-full h-1.5 bg-muted/30 rounded-full overflow-hidden">
+                <div className="w-full h-1.5 bg-muted/30 rounded-full overflow-hidden mt-3 ml-6">
                   <div 
                     className={cn(
                       "h-full transition-all duration-500",
@@ -150,18 +182,7 @@ export default function OrchestrationVisual({
                     )}
                   />
                 </div>
-
-                {/* Hover Effect */}
-                <div className="absolute inset-0 bg-primary/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity" />
               </Card>
-
-              {/* Connection Line to Orchestrator */}
-              {isPulsing && isProcessing && (
-                <div 
-                  className="absolute bottom-full left-1/2 w-px bg-gradient-to-t from-primary/50 to-transparent"
-                  style={{ height: '80px' }}
-                />
-              )}
             </button>
           );
         })}
