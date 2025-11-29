@@ -8,7 +8,7 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    --background: 210 25% 97%;
+    --background: 220 25% 96%;
     --foreground: 220 20% 15%;
 
     --card: 0 0% 100%;
@@ -17,51 +17,59 @@ All colors MUST be HSL.
     --popover: 0 0% 100%;
     --popover-foreground: 220 20% 15%;
 
-    --primary: 220 70% 50%;
+    --primary: 220 85% 58%;
     --primary-foreground: 0 0% 100%;
+    --primary-glow: 220 85% 68%;
 
-    --secondary: 210 30% 92%;
-    --secondary-foreground: 220 20% 15%;
+    --secondary: 260 60% 55%;
+    --secondary-foreground: 0 0% 100%;
+    --secondary-glow: 260 70% 70%;
 
     --muted: 210 25% 94%;
     --muted-foreground: 220 15% 50%;
 
-    --accent: 190 75% 45%;
+    --accent: 190 85% 50%;
     --accent-foreground: 0 0% 100%;
+    --accent-glow: 190 85% 65%;
 
-    --success: 145 65% 45%;
+    --success: 145 70% 48%;
     --success-foreground: 0 0% 100%;
 
     --destructive: 0 75% 55%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 220 20% 88%;
-    --input: 220 20% 88%;
-    --ring: 220 70% 50%;
+    --border: 220 20% 90%;
+    --input: 220 20% 90%;
+    --ring: 220 85% 58%;
 
     --glass-bg: 0 0% 100%;
     --glass-border: 220 20% 88%;
     
-    --radius: 0.75rem;
+    --radius: 1rem;
     
-    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    --shadow-glass: 0 8px 32px 0 rgba(31, 38, 135, 0.1);
-    --shadow-glass-hover: 0 8px 32px 0 rgba(31, 38, 135, 0.15);
+    --transition-smooth: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-bounce: all 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    
+    --shadow-glass: 0 8px 32px 0 rgba(31, 38, 135, 0.12);
+    --shadow-glass-hover: 0 12px 48px 0 rgba(31, 38, 135, 0.2);
+    --shadow-glow: 0 0 40px rgba(59, 130, 246, 0.3);
+    --shadow-glow-accent: 0 0 40px rgba(6, 182, 212, 0.3);
+    
+    --gradient-primary: linear-gradient(135deg, hsl(220 85% 58%), hsl(260 60% 55%));
+    --gradient-accent: linear-gradient(135deg, hsl(190 85% 50%), hsl(220 85% 58%));
+    --gradient-glass: linear-gradient(135deg, rgba(255, 255, 255, 0.4), rgba(255, 255, 255, 0.1));
+    --gradient-mesh: radial-gradient(at 0% 0%, hsl(220 85% 68% / 0.2) 0px, transparent 50%),
+                     radial-gradient(at 100% 0%, hsl(260 70% 70% / 0.15) 0px, transparent 50%),
+                     radial-gradient(at 100% 100%, hsl(190 85% 65% / 0.2) 0px, transparent 50%),
+                     radial-gradient(at 0% 100%, hsl(220 85% 68% / 0.15) 0px, transparent 50%);
 
     --sidebar-background: 0 0% 98%;
-
     --sidebar-foreground: 240 5.3% 26.1%;
-
     --sidebar-primary: 240 5.9% 10%;
-
     --sidebar-primary-foreground: 0 0% 98%;
-
     --sidebar-accent: 240 4.8% 95.9%;
-
     --sidebar-accent-foreground: 240 5.9% 10%;
-
     --sidebar-border: 220 13% 91%;
-
     --sidebar-ring: 217.2 91.2% 59.8%;
   }
 
@@ -75,19 +83,22 @@ All colors MUST be HSL.
     --popover: 220 20% 12%;
     --popover-foreground: 210 25% 95%;
 
-    --primary: 220 70% 55%;
+    --primary: 220 85% 62%;
     --primary-foreground: 0 0% 100%;
+    --primary-glow: 220 85% 72%;
 
-    --secondary: 220 20% 18%;
-    --secondary-foreground: 210 25% 95%;
+    --secondary: 260 65% 60%;
+    --secondary-foreground: 0 0% 100%;
+    --secondary-glow: 260 75% 75%;
 
     --muted: 220 20% 18%;
     --muted-foreground: 220 15% 65%;
 
-    --accent: 190 75% 50%;
+    --accent: 190 85% 55%;
     --accent-foreground: 0 0% 100%;
+    --accent-glow: 190 85% 70%;
 
-    --success: 145 65% 50%;
+    --success: 145 70% 52%;
     --success-foreground: 0 0% 100%;
 
     --destructive: 0 75% 60%;
@@ -95,13 +106,23 @@ All colors MUST be HSL.
 
     --border: 220 20% 25%;
     --input: 220 20% 25%;
-    --ring: 220 70% 55%;
+    --ring: 220 85% 62%;
 
     --glass-bg: 220 20% 12%;
     --glass-border: 220 20% 25%;
     
-    --shadow-glass: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
-    --shadow-glass-hover: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
+    --shadow-glass: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
+    --shadow-glass-hover: 0 12px 48px 0 rgba(0, 0, 0, 0.6);
+    --shadow-glow: 0 0 40px rgba(59, 130, 246, 0.4);
+    --shadow-glow-accent: 0 0 40px rgba(6, 182, 212, 0.4);
+    
+    --gradient-primary: linear-gradient(135deg, hsl(220 85% 62%), hsl(260 65% 60%));
+    --gradient-accent: linear-gradient(135deg, hsl(190 85% 55%), hsl(220 85% 62%));
+    --gradient-glass: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+    --gradient-mesh: radial-gradient(at 0% 0%, hsl(220 85% 72% / 0.15) 0px, transparent 50%),
+                     radial-gradient(at 100% 0%, hsl(260 75% 75% / 0.1) 0px, transparent 50%),
+                     radial-gradient(at 100% 100%, hsl(190 85% 70% / 0.15) 0px, transparent 50%),
+                     radial-gradient(at 0% 100%, hsl(220 85% 72% / 0.1) 0px, transparent 50%);
   }
 }
 
@@ -112,13 +133,18 @@ All colors MUST be HSL.
 
   body {
     @apply bg-background text-foreground font-sans antialiased;
+    background: var(--gradient-mesh), hsl(var(--background));
   }
 }
 
 @layer utilities {
   .glass {
-    @apply bg-glass-bg/70 backdrop-blur-xl border border-glass-border;
+    @apply bg-glass-bg/60 backdrop-blur-2xl border border-glass-border/60;
     box-shadow: var(--shadow-glass);
+    background: linear-gradient(135deg, 
+      hsl(var(--glass-bg) / 0.7), 
+      hsl(var(--glass-bg) / 0.5)
+    );
   }
   
   .glass-hover {
@@ -127,6 +153,52 @@ All colors MUST be HSL.
   
   .glass-hover:hover {
     box-shadow: var(--shadow-glass-hover);
-    @apply border-primary/30;
+    @apply border-primary/40 scale-[1.01];
+    background: linear-gradient(135deg, 
+      hsl(var(--glass-bg) / 0.8), 
+      hsl(var(--glass-bg) / 0.6)
+    );
+  }
+  
+  .gradient-primary {
+    background: var(--gradient-primary);
+  }
+  
+  .gradient-accent {
+    background: var(--gradient-accent);
+  }
+  
+  .glow-primary {
+    box-shadow: var(--shadow-glow);
+  }
+  
+  .glow-accent {
+    box-shadow: var(--shadow-glow-accent);
+  }
+  
+  .animate-glow {
+    animation: glow 2s ease-in-out infinite alternate;
+  }
+  
+  @keyframes glow {
+    from {
+      box-shadow: 0 0 20px hsl(var(--primary) / 0.3);
+    }
+    to {
+      box-shadow: 0 0 40px hsl(var(--primary) / 0.6);
+    }
+  }
+  
+  .animate-float {
+    animation: float 3s ease-in-out infinite;
+  }
+  
+  @keyframes float {
+    0%, 100% {
+      transform: translateY(0px);
+    }
+    50% {
+      transform: translateY(-10px);
+    }
   }
 }
