@@ -73,7 +73,7 @@ export default function ComparePage() {
             <div className="animate-float mb-8">
               <Trophy className="mx-auto mb-6 h-24 w-24 text-success drop-shadow-2xl" />
             </div>
-            <h2 className="mb-4 text-5xl font-black bg-gradient-to-r from-success to-accent bg-clip-text text-transparent">Winner Selected!</h2>
+            <h2 className="mb-4 text-5xl font-black text-foreground">Winner Selected!</h2>
             <p className="mb-12 text-xl text-muted-foreground">
               This offer has been marked as the winner in your negotiation dashboard
             </p>
@@ -83,7 +83,7 @@ export default function ComparePage() {
                 Best Offer
               </Badge>
               <h3 className="mb-4 text-3xl font-bold">{winner.supplierName}</h3>
-              <p className="mb-8 text-5xl font-black bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+              <p className="mb-8 text-5xl font-black text-foreground">
                 ${winner.price.toLocaleString()}
               </p>
 
@@ -131,7 +131,7 @@ export default function ComparePage() {
                     Option {index + 1}
                   </Badge>
                   <h3 className="mb-3 text-2xl font-bold">{offer.supplierName}</h3>
-                  <p className="mb-8 text-4xl font-black bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+                  <p className="mb-8 text-4xl font-black text-foreground">
                     ${offer.price.toLocaleString()}
                   </p>
 
