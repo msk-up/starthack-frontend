@@ -76,7 +76,7 @@ export default function SearchPage() {
               onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
               className="border-0 bg-transparent text-base shadow-none focus-visible:ring-0 placeholder:text-muted-foreground/60"
             />
-            <Button onClick={handleSearch} size="lg" variant="gradient" className="gap-2 px-10 shadow-xl">
+            <Button onClick={handleSearch} size="lg" variant="default" className="gap-2 px-10">
               <Search className="h-5 w-5" />
               Search
             </Button>
@@ -90,7 +90,7 @@ export default function SearchPage() {
           <div className="mb-8 flex items-center justify-between">
             <h3 className="text-3xl font-bold">Available Suppliers</h3>
             {selectedSuppliers.length > 0 && (
-              <Button onClick={handleProceed} size="lg" variant="glassPrimary" className="gap-3 shadow-2xl">
+              <Button onClick={handleProceed} size="lg" variant="default" className="gap-3">
                 Proceed with {selectedSuppliers.length} Supplier
                 {selectedSuppliers.length !== 1 ? 's' : ''}
               </Button>

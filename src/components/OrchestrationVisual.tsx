@@ -59,9 +59,9 @@ export default function OrchestrationVisual({
   const getStatusIcon = (status: string) => {
     switch (status) {
       case 'offer_received':
-        return <CheckCircle className="h-4 w-4 text-success" />;
+        return <CheckCircle className="h-4 w-4" />;
       case 'processing':
-        return <MessageSquare className="h-4 w-4 text-primary animate-pulse" />;
+        return <MessageSquare className="h-4 w-4" />;
       case 'waiting':
         return <Clock className="h-4 w-4 text-muted-foreground" />;
       default:
@@ -72,13 +72,13 @@ export default function OrchestrationVisual({
   const getStatusColor = (status: string) => {
     switch (status) {
       case 'offer_received':
-        return 'border-success bg-success/5';
+        return 'border-foreground/20 bg-card';
       case 'processing':
-        return 'border-primary bg-primary/5';
+        return 'border-foreground/10 bg-card';
       case 'waiting':
-        return 'border-muted bg-muted/5';
+        return 'border-border bg-card';
       default:
-        return 'border-border bg-background/50';
+        return 'border-border bg-card';
     }
   };
 
@@ -87,26 +87,26 @@ export default function OrchestrationVisual({
       {/* Orchestration Agent with Prompt - Left Side */}
       <div className="w-[420px] flex-shrink-0">
         <Card className={cn(
-          "glass p-6 rounded-2xl shadow-2xl border-2 transition-all duration-300",
-          isProcessing ? "border-primary" : "border-border"
+          "border bg-card transition-all duration-300",
+          isProcessing && "border-foreground"
         )}>
-          <div className="flex flex-col gap-5">
+          <div className="p-6 space-y-5">
             {/* Agent Header */}
             <div className="flex items-center gap-3">
-              <div className="rounded-xl bg-gradient-to-br from-primary to-secondary p-3">
-                <Zap className="h-6 w-6 text-white" />
+              <div className="w-10 h-10 rounded-lg bg-foreground flex items-center justify-center">
+                <Zap className="h-5 w-5 text-background" />
               </div>
               <div>
-                <h3 className="font-bold text-xl">Orchestration Agent</h3>
+                <h3 className="font-semibold text-lg">Orchestration Agent</h3>
                 <p className="text-sm text-muted-foreground">
-                  {isProcessing ? 'Distributing tasks...' : 'Ready'}
+                  {isProcessing ? 'Processing...' : 'Ready'}
                 </p>
               </div>
             </div>
 
             {/* Prompt Input */}
             <div className="space-y-3">
-              <label className="text-sm font-semibold text-foreground">
+              <label className="text-sm font-medium text-foreground">
                 Negotiation Prompt
               </label>
               <Textarea
@@ -114,18 +114,18 @@ export default function OrchestrationVisual({
                 onChange={(e) => setPrompt(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder="e.g., Request best pricing for bulk order of 100 units with 30-day payment terms..."
-                className="min-h-[140px] resize-none glass border-2 focus:border-primary transition-all"
+                className="min-h-[140px] resize-none border focus:border-foreground"
                 disabled={isProcessing}
               />
               <div className="flex items-center justify-between pt-1">
                 <p className="text-xs text-muted-foreground">
-                  Cmd/Ctrl + Enter to send
+                  ⌘ + Enter to send
                 </p>
                 <Button
                   onClick={handleSubmit}
                   disabled={!prompt.trim() || isProcessing}
-                  variant="gradientAccent"
-                  size="default"
+                  variant="default"
+                  size="sm"
                   className="gap-2"
                 >
                   <Send className="h-4 w-4" />

@@ -67,34 +67,22 @@ export default function NegotiationPage() {
 
         {/* Main Content */}
         <div className="flex-1 flex flex-col">
-          {/* Header */}
-          <header className="glass sticky top-0 z-50 border-b backdrop-blur-2xl">
-            <div className="px-6 py-5">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <SidebarTrigger className="lg:hidden">
-                    <Button variant="glass" size="icon">
-                      <Menu className="h-5 w-5" />
-                    </Button>
-                  </SidebarTrigger>
-                  <Button variant="glass" size="icon" onClick={() => navigate('/')}>
-                    <ArrowLeft className="h-5 w-5" />
-                  </Button>
-                  <div className="flex items-center gap-3">
-                    <div className="rounded-xl bg-gradient-to-br from-primary to-secondary p-2 shadow-lg glow-primary">
-                      <TrendingUp className="h-5 w-5 text-white" />
-                    </div>
-                    <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-                      Negotiation Dashboard
-                    </h1>
-                  </div>
-                </div>
-                <Badge className="px-4 py-2 text-sm font-semibold rounded-full bg-primary/10 text-primary border-primary/20">
-                  {selectedSuppliers.length} Active Suppliers
-                </Badge>
-              </div>
+      {/* Header */}
+      <header className="border-b bg-background/80 backdrop-blur-sm sticky top-0 z-50">
+        <div className="container mx-auto px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <Button variant="ghost" size="icon" onClick={() => navigate('/')}>
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+              <h1 className="text-2xl font-semibold tracking-tight">Negotiation Dashboard</h1>
             </div>
-          </header>
+            <Badge variant="secondary" className="px-4 py-2 text-sm font-medium rounded-full">
+              {selectedSuppliers.length} Active Suppliers
+            </Badge>
+          </div>
+        </div>
+      </header>
 
           {/* Main Content Area */}
           <div className="flex-1 overflow-hidden">
