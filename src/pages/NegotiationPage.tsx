@@ -90,9 +90,9 @@ export default function NegotiationPage() {
 
       <div className="container mx-auto flex gap-6 p-6">
         {/* Left Panel - Suppliers by Category */}
-        <div className="w-96 shrink-0 space-y-6">
+        <div className="w-80 shrink-0 space-y-6">
           {/* Product Categories Section */}
-          <Card className="glass sticky top-24 p-6 rounded-2xl shadow-2xl">
+          <Card className="glass sticky top-24 p-6 rounded-2xl shadow-2xl min-h-[280px]">
             <h3 className="mb-6 text-lg font-bold">Product Categories</h3>
             <Tabs value={activeCategory} onValueChange={(v) => setActiveCategory(v as ProductCategory)}>
               <TabsList className="grid w-full grid-cols-1 gap-3 bg-transparent p-0">
@@ -120,7 +120,7 @@ export default function NegotiationPage() {
             <h4 className="mb-4 text-sm font-bold text-muted-foreground uppercase tracking-wide">
               {CATEGORIES.find((c) => c.value === activeCategory)?.label} Suppliers
             </h4>
-            <ScrollArea className="h-[500px]">
+            <ScrollArea className="h-[450px]">
               <div className="space-y-3 pr-4">
                 {categorizedSuppliers.map((supplier) => {
                   const conv = mockConversations.find((c) => c.supplierId === supplier.id);
