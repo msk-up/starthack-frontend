@@ -97,14 +97,16 @@ export default function NegotiationPage() {
           </header>
 
           {/* Main Content Area */}
-          <div className="flex-1 p-6 overflow-auto">
-            <div className="max-w-7xl mx-auto">
-              <OrchestrationVisual 
-                suppliers={supplierSeats}
-                onSupplierClick={handleSupplierClick}
-                isProcessing={isProcessing}
-                onPromptSubmit={handlePromptSubmit}
-              />
+          <div className="flex-1 overflow-hidden">
+            <div className="h-full overflow-y-auto p-4 lg:p-6">
+              <div className="max-w-[1600px] mx-auto">
+                <OrchestrationVisual 
+                  suppliers={supplierSeats}
+                  onSupplierClick={handleSupplierClick}
+                  isProcessing={isProcessing}
+                  onPromptSubmit={handlePromptSubmit}
+                />
+              </div>
             </div>
           </div>
         </div>

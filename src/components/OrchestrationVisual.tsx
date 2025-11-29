@@ -83,20 +83,17 @@ export default function OrchestrationVisual({
   };
 
   return (
-    <div className="flex items-center justify-center gap-12 py-8">
+    <div className="flex flex-col lg:flex-row items-start justify-center gap-8 py-6 w-full">
       {/* Orchestration Agent - Left Side */}
-      <div className="flex-shrink-0">
+      <div className="w-full lg:w-96 flex-shrink-0">
         <Card className={cn(
-          "glass p-6 rounded-2xl shadow-2xl border-2 transition-all duration-300 w-96",
-          isProcessing ? "border-primary glow-primary" : "border-border"
+          "glass p-6 rounded-2xl shadow-2xl border-2 transition-all duration-300",
+          isProcessing ? "border-primary" : "border-border"
         )}>
           <div className="flex flex-col gap-4">
             {/* Agent Header */}
             <div className="flex items-center gap-3">
-              <div className={cn(
-                "rounded-xl bg-gradient-to-br from-primary to-secondary p-3",
-                isProcessing && "animate-pulse"
-              )}>
+              <div className="rounded-xl bg-gradient-to-br from-primary to-secondary p-3">
                 <Zap className="h-6 w-6 text-white" />
               </div>
               <div>
@@ -142,103 +139,96 @@ export default function OrchestrationVisual({
         </Card>
       </div>
 
-      {/* Connection Lines Container */}
-      <div className="relative flex-shrink-0" style={{ width: '120px', height: '500px' }}>
+      {/* Connection Lines Container - Hidden on mobile */}
+      <div className="hidden lg:block relative flex-shrink-0 self-stretch" style={{ width: '100px', minHeight: '400px' }}>
         {suppliers.map((_, index) => {
           const isActive = activeConnection === index;
-          const yPosition = (index * (500 / suppliers.length)) + (500 / suppliers.length / 2);
+          const totalHeight = Math.max(400, suppliers.length * 100);
+          const yPosition = (index * (totalHeight / suppliers.length)) + (totalHeight / suppliers.length / 2);
           
           return (
             <svg
               key={index}
-              className="absolute top-0 left-0 w-full h-full pointer-events-none"
-              style={{ zIndex: isActive ? 10 : 1 }}
+              className="absolute top-0 left-0 w-full pointer-events-none"
+              style={{ height: `${totalHeight}px`, zIndex: isActive ? 10 : 1 }}
             >
               <line
                 x1="0"
-                y1="250"
-                x2="120"
+                y1={totalHeight / 2}
+                x2="100"
                 y2={yPosition}
                 stroke={isActive ? "hsl(var(--primary))" : "hsl(var(--border))"}
-                strokeWidth={isActive ? "3" : "2"}
-                strokeDasharray={isActive ? "0" : "5,5"}
-                className={cn(
-                  "transition-all duration-300",
-                  isActive && "animate-pulse"
-                )}
+                strokeWidth={isActive ? "2" : "1"}
+                strokeDasharray="5,5"
+                className="transition-all duration-300"
               />
-              {isActive && (
-                <circle cx="120" cy={yPosition} r="4" fill="hsl(var(--primary))">
-                  <animate attributeName="r" from="4" to="8" dur="0.6s" repeatCount="indefinite" />
-                  <animate attributeName="opacity" from="1" to="0" dur="0.6s" repeatCount="indefinite" />
-                </circle>
-              )}
             </svg>
           );
         })}
       </div>
 
-      {/* Supplier Seats - Right Side (Stacked Vertically) */}
-      <div className="flex flex-col gap-4 flex-shrink-0 w-96">
-        {suppliers.map((supplier, index) => {
-          const isActive = activeConnection === index;
-          
-          return (
-            <button
-              key={supplier.id}
-              onClick={() => onSupplierClick(supplier.id)}
-              className={cn(
-                "relative group text-left transition-all duration-300",
-                supplier.hasNewUpdate && "animate-pulse"
-              )}
-            >
-              <Card className={cn(
-                "glass p-5 rounded-xl border-2 transition-all duration-300 hover:scale-[1.02] hover:shadow-xl",
-                getStatusColor(supplier.status),
-                isActive && "ring-2 ring-primary ring-offset-2 border-primary",
-                supplier.hasNewUpdate && "border-primary shadow-primary/20"
-              )}>
-                {/* New Update Indicator */}
-                {supplier.hasNewUpdate && (
-                  <div className="absolute -top-2 -right-2 z-10">
-                    <Badge className="bg-primary text-white border-0 rounded-full px-3 py-1 shadow-lg animate-bounce">
-                      New
-                    </Badge>
+      {/* Supplier Seats - Right Side (Stacked Vertically with Scroll) */}
+      <div className="flex-1 w-full lg:max-w-xl">
+        <div className="max-h-[calc(100vh-200px)] overflow-y-auto pr-2 space-y-4">
+          {suppliers.map((supplier, index) => {
+            const isActive = activeConnection === index;
+            
+            return (
+              <button
+                key={supplier.id}
+                onClick={() => onSupplierClick(supplier.id)}
+                className="relative group text-left transition-all duration-200 w-full"
+              >
+                <Card className={cn(
+                  "glass p-4 rounded-xl border-2 transition-all duration-200 hover:shadow-lg",
+                  getStatusColor(supplier.status),
+                  isActive && "border-primary",
+                  supplier.hasNewUpdate && "border-primary shadow-primary/10"
+                )}>
+                  {/* New Update Indicator */}
+                  {supplier.hasNewUpdate && (
+                    <div className="absolute -top-2 -right-2 z-10">
+                      <Badge className="bg-primary text-white border-0 rounded-full px-2 py-1 text-xs shadow-lg">
+                        New
+                      </Badge>
+                    </div>
+                  )}
+
+                  {/* Agent Seat Label */}
+                  <div className="absolute -left-2 lg:-left-3 top-1/2 -translate-y-1/2 w-8 h-8 lg:w-10 lg:h-10 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-white font-bold text-sm shadow-lg">
+                    {String.fromCharCode(65 + index)}
                   </div>
-                )}
 
-                {/* Agent Seat Label */}
-                <div className="absolute -left-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-white font-bold shadow-lg">
-                  {String.fromCharCode(65 + index)}
-                </div>
-
-                <div className="pl-6 flex items-center justify-between">
-                  <div className="flex-1">
-                    <h4 className="font-bold text-base mb-1">{supplier.name}</h4>
-                    {supplier.lastUpdate && (
-                      <p className="text-xs text-muted-foreground">
-                        {supplier.lastUpdate.toLocaleTimeString()}
-                      </p>
-                    )}
+                  <div className="pl-8 lg:pl-10 flex items-center justify-between">
+                    <div className="flex-1 min-w-0">
+                      <h4 className="font-bold text-sm lg:text-base mb-1 truncate">{supplier.name}</h4>
+                      {supplier.lastUpdate && (
+                        <p className="text-xs text-muted-foreground">
+                          {supplier.lastUpdate.toLocaleTimeString()}
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex-shrink-0 ml-2">
+                      {getStatusIcon(supplier.status)}
+                    </div>
                   </div>
-                  {getStatusIcon(supplier.status)}
-                </div>
 
-                {/* Status Bar */}
-                <div className="w-full h-1.5 bg-muted/30 rounded-full overflow-hidden mt-3 ml-6">
-                  <div 
-                    className={cn(
-                      "h-full transition-all duration-500",
-                      supplier.status === 'offer_received' && "w-full bg-success",
-                      supplier.status === 'processing' && "w-2/3 bg-primary animate-pulse",
-                      supplier.status === 'waiting' && "w-1/3 bg-muted-foreground"
-                    )}
-                  />
-                </div>
-              </Card>
-            </button>
-          );
-        })}
+                  {/* Status Bar */}
+                  <div className="w-full h-1.5 bg-muted/30 rounded-full overflow-hidden mt-3 ml-8 lg:ml-10">
+                    <div 
+                      className={cn(
+                        "h-full transition-all duration-500",
+                        supplier.status === 'offer_received' && "w-full bg-success",
+                        supplier.status === 'processing' && "w-2/3 bg-primary",
+                        supplier.status === 'waiting' && "w-1/3 bg-muted-foreground"
+                      )}
+                    />
+                  </div>
+                </Card>
+              </button>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
