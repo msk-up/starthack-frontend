@@ -48,20 +48,22 @@ export default function ComparePage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="glass sticky top-0 z-50 border-b">
-        <div className="container mx-auto px-6 py-4">
+      <header className="glass sticky top-0 z-50 border-b backdrop-blur-2xl">
+        <div className="container mx-auto px-6 py-5">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+              <Button variant="glass" size="icon" onClick={() => navigate(-1)}>
                 <ArrowLeft className="h-5 w-5" />
               </Button>
-              <div className="flex items-center gap-2">
-                <TrendingUp className="h-6 w-6 text-primary" />
-                <h1 className="text-xl font-semibold">Compare Offers</h1>
+              <div className="flex items-center gap-3">
+                <div className="rounded-xl bg-gradient-to-br from-primary to-secondary p-2 shadow-lg glow-primary">
+                  <TrendingUp className="h-5 w-5 text-white" />
+                </div>
+                <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">Compare Offers</h1>
               </div>
             </div>
             {!winner && remainingOffers.length > 0 && (
-              <Badge variant="secondary">
+              <Badge className="px-4 py-2 text-sm font-semibold rounded-full bg-primary/10 text-primary border-primary/20">
                 {remainingOffers.length} Offer{remainingOffers.length !== 1 ? 's' : ''} Remaining
               </Badge>
             )}
@@ -72,86 +74,88 @@ export default function ComparePage() {
       <div className="container mx-auto px-6 py-12">
         {winner ? (
           // Winner Screen
-          <div className="mx-auto max-w-2xl text-center">
-            <Trophy className="mx-auto mb-6 h-16 w-16 text-success" />
-            <h2 className="mb-4 text-3xl font-bold">Winner Selected!</h2>
-            <p className="mb-8 text-muted-foreground">
+          <div className="mx-auto max-w-3xl text-center">
+            <div className="animate-float mb-8">
+              <Trophy className="mx-auto mb-6 h-24 w-24 text-success drop-shadow-2xl" />
+            </div>
+            <h2 className="mb-4 text-5xl font-black bg-gradient-to-r from-success to-accent bg-clip-text text-transparent">Winner Selected!</h2>
+            <p className="mb-12 text-xl text-muted-foreground">
               This offer has been marked as the winner in your negotiation dashboard
             </p>
 
-            <Card className="glass mb-8 border-success p-8 ring-2 ring-success/20">
-              <Badge variant="default" className="mb-4 bg-success">
+            <Card className="glass mb-10 border-success border-2 p-10 ring-4 ring-success/30 shadow-2xl shadow-success/20 rounded-3xl">
+              <Badge className="mb-6 bg-gradient-to-r from-success to-success/80 text-white border-0 px-6 py-2 shadow-lg rounded-xl text-base">
                 Best Offer
               </Badge>
-              <h3 className="mb-2 text-2xl font-semibold">{winner.supplierName}</h3>
-              <p className="mb-6 text-3xl font-bold text-primary">
+              <h3 className="mb-4 text-3xl font-bold">{winner.supplierName}</h3>
+              <p className="mb-8 text-5xl font-black bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
                 ${winner.price.toLocaleString()}
               </p>
 
-              <div className="space-y-3 text-left">
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Delivery Time</span>
-                  <span className="font-medium">{winner.deliveryTime}</span>
+              <div className="space-y-4 text-left">
+                <div className="flex justify-between text-base rounded-xl bg-muted/30 p-4">
+                  <span className="text-muted-foreground font-semibold">Delivery Time</span>
+                  <span className="font-bold">{winner.deliveryTime}</span>
                 </div>
-                <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Terms</span>
-                  <span className="max-w-xs text-right font-medium">{winner.terms}</span>
+                <div className="flex justify-between text-base rounded-xl bg-muted/30 p-4">
+                  <span className="text-muted-foreground font-semibold">Terms</span>
+                  <span className="max-w-xs text-right font-bold">{winner.terms}</span>
                 </div>
               </div>
 
-              <div className="mt-6 rounded-lg bg-muted/30 p-4">
-                <p className="text-sm">{winner.summary}</p>
+              <div className="mt-8 rounded-2xl bg-muted/40 p-6 border border-muted">
+                <p className="text-base leading-relaxed">{winner.summary}</p>
               </div>
             </Card>
 
-            <Button size="lg" onClick={handleFinish}>
+            <Button size="lg" variant="gradient" onClick={handleFinish} className="px-12 text-base shadow-2xl">
               Return to Dashboard
             </Button>
           </div>
         ) : currentPair ? (
           // Comparison Screen
           <div>
-            <div className="mb-8 text-center">
-              <h2 className="mb-2 text-2xl font-semibold">Choose the Better Offer</h2>
-              <p className="text-muted-foreground">
+            <div className="mb-12 text-center">
+              <h2 className="mb-4 text-4xl font-bold">Choose the Better Offer</h2>
+              <p className="text-xl text-muted-foreground">
                 Select the offer you prefer to continue to the next round
               </p>
             </div>
 
-            <div className="grid gap-6 md:grid-cols-2">
+            <div className="grid gap-8 md:grid-cols-2">
               {currentPair.map((offer, index) => (
                 <Card
                   key={offer.id}
                   className={cn(
-                    'glass glass-hover cursor-pointer p-8 transition-all hover:scale-[1.02]',
-                    'hover:border-primary'
+                    'glass glass-hover cursor-pointer p-10 transition-all hover:scale-[1.03] rounded-3xl shadow-2xl',
+                    'hover:border-primary/60'
                   )}
                   onClick={() => handleSelect(offer)}
                 >
-                  <Badge variant="secondary" className="mb-4">
+                  <Badge className="mb-6 px-4 py-2 rounded-xl bg-secondary/10 text-secondary border-secondary/20 font-bold text-base">
                     Option {index + 1}
                   </Badge>
-                  <h3 className="mb-2 text-xl font-semibold">{offer.supplierName}</h3>
-                  <p className="mb-6 text-3xl font-bold text-primary">
+                  <h3 className="mb-3 text-2xl font-bold">{offer.supplierName}</h3>
+                  <p className="mb-8 text-4xl font-black bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
                     ${offer.price.toLocaleString()}
                   </p>
 
-                  <div className="mb-6 space-y-3">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Delivery Time</span>
-                      <span className="font-medium">{offer.deliveryTime}</span>
+                  <div className="mb-8 space-y-4">
+                    <div className="flex justify-between items-center text-base rounded-xl bg-muted/30 p-4">
+                      <span className="text-muted-foreground font-semibold">Delivery Time</span>
+                      <span className="font-bold">{offer.deliveryTime}</span>
                     </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Terms</span>
-                      <span className="max-w-xs text-right font-medium">{offer.terms}</span>
+                    <div className="flex justify-between items-center text-base rounded-xl bg-muted/30 p-4">
+                      <span className="text-muted-foreground font-semibold">Terms</span>
+                      <span className="max-w-xs text-right font-bold">{offer.terms}</span>
                     </div>
                   </div>
 
-                  <div className="rounded-lg bg-muted/30 p-4">
-                    <p className="text-sm">{offer.summary}</p>
+                  <div className="rounded-2xl bg-muted/40 p-6 mb-6 border border-muted">
+                    <p className="text-base leading-relaxed">{offer.summary}</p>
                   </div>
 
-                  <Button className="mt-6 w-full" variant="outline">
+                  <Button className="mt-4 w-full" variant="glassPrimary" size="lg">
                     Select This Offer
                   </Button>
                 </Card>
@@ -161,8 +165,8 @@ export default function ComparePage() {
         ) : (
           // Loading/Error State
           <div className="text-center">
-            <p className="text-muted-foreground">No offers available for comparison</p>
-            <Button className="mt-4" onClick={() => navigate('/')}>
+            <p className="text-xl text-muted-foreground mb-6">No offers available for comparison</p>
+            <Button className="mt-4" variant="gradient" size="lg" onClick={() => navigate('/')}>
               Go to Search
             </Button>
           </div>
