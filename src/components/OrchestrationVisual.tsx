@@ -83,7 +83,7 @@ export default function OrchestrationVisual({
   };
 
   return (
-    <div className="flex items-start gap-8 w-full max-w-7xl mx-auto">
+    <div className="flex items-center gap-6 w-full max-w-7xl mx-auto py-8">
       {/* Orchestration Agent with Prompt - Left Side */}
       <div className="w-[420px] flex-shrink-0">
         <Card className={cn(
@@ -138,34 +138,36 @@ export default function OrchestrationVisual({
       </div>
 
       {/* Connection Lines - Visual Flow */}
-      <div className="relative flex-shrink-0 self-center" style={{ width: '80px', height: '400px' }}>
+      <div className="relative flex-shrink-0" style={{ width: '100px', height: `${suppliers.length * 120}px` }}>
         {suppliers.map((_, index) => {
           const isActive = activeConnection === index;
-          const spacing = 400 / Math.max(suppliers.length, 1);
-          const yPosition = (index * spacing) + (spacing / 2);
+          const yStart = (suppliers.length * 120) / 2;
+          const yEnd = (index * 120) + 60;
           
           return (
             <svg
               key={index}
               className="absolute inset-0 pointer-events-none"
-              style={{ width: '80px', height: '400px' }}
+              width="100"
+              height={suppliers.length * 120}
             >
               <line
                 x1="0"
-                y1="200"
-                x2="80"
-                y2={yPosition}
-                stroke={isActive ? "hsl(var(--primary))" : "hsl(var(--muted-foreground) / 0.3)"}
+                y1={yStart}
+                x2="100"
+                y2={yEnd}
+                stroke={isActive ? "hsl(var(--primary))" : "hsl(var(--border))"}
                 strokeWidth={isActive ? "2" : "1"}
                 strokeDasharray="4,4"
+                className="transition-all duration-300"
               />
             </svg>
           );
         })}
       </div>
 
-      {/* Supplier Seats - Right Side */}
-      <div className="flex-1 min-w-0">
+      {/* Supplier Seats - Right Side (Vertically Aligned with Lines) */}
+      <div className="flex-1 min-w-0 max-w-2xl">
         <div className="space-y-4">
           {suppliers.map((supplier, index) => {
             const isActive = activeConnection === index;
@@ -175,9 +177,10 @@ export default function OrchestrationVisual({
                 key={supplier.id}
                 onClick={() => onSupplierClick(supplier.id)}
                 className="relative group text-left transition-all duration-200 w-full block"
+                style={{ height: '112px' }}
               >
                 <Card className={cn(
-                  "glass p-5 rounded-2xl border-2 transition-all duration-200 hover:shadow-xl hover:border-primary/50",
+                  "glass p-4 rounded-xl border-2 transition-all duration-200 hover:shadow-lg hover:border-primary/50 h-full flex items-center",
                   getStatusColor(supplier.status),
                   isActive && "border-primary shadow-primary/20",
                   supplier.hasNewUpdate && "border-success"
@@ -192,34 +195,35 @@ export default function OrchestrationVisual({
                   )}
 
                   {/* Seat Label */}
-                  <div className="absolute -left-3 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-white font-bold text-base shadow-lg z-10">
+                  <div className="absolute -left-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-white font-bold text-lg shadow-lg z-10">
                     {String.fromCharCode(65 + index)}
                   </div>
 
-                  <div className="pl-10 flex items-center justify-between gap-4">
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-bold text-lg mb-1 truncate">{supplier.name}</h4>
-                      {supplier.lastUpdate && (
-                        <p className="text-xs text-muted-foreground">
-                          Last update: {supplier.lastUpdate.toLocaleTimeString()}
-                        </p>
-                      )}
+                  <div className="pl-10 pr-4 flex items-center justify-between gap-4 w-full">
+                    <div className="flex-1 min-w-0 space-y-2">
+                      <div>
+                        <h4 className="font-bold text-lg truncate">{supplier.name}</h4>
+                        {supplier.lastUpdate && (
+                          <p className="text-xs text-muted-foreground">
+                            Last update: {supplier.lastUpdate.toLocaleTimeString()}
+                          </p>
+                        )}
+                      </div>
+                      {/* Progress Bar */}
+                      <div className="w-full h-2 bg-muted/30 rounded-full overflow-hidden">
+                        <div 
+                          className={cn(
+                            "h-full transition-all duration-500 rounded-full",
+                            supplier.status === 'offer_received' && "w-full bg-success",
+                            supplier.status === 'processing' && "w-2/3 bg-primary",
+                            supplier.status === 'waiting' && "w-1/3 bg-muted-foreground"
+                          )}
+                        />
+                      </div>
                     </div>
                     <div className="flex-shrink-0">
                       {getStatusIcon(supplier.status)}
                     </div>
-                  </div>
-
-                  {/* Progress Bar */}
-                  <div className="w-full h-2 bg-muted/30 rounded-full overflow-hidden mt-4 ml-10">
-                    <div 
-                      className={cn(
-                        "h-full transition-all duration-500 rounded-full",
-                        supplier.status === 'offer_received' && "w-full bg-success",
-                        supplier.status === 'processing' && "w-2/3 bg-primary",
-                        supplier.status === 'waiting' && "w-1/3 bg-muted-foreground"
-                      )}
-                    />
                   </div>
                 </Card>
               </button>
