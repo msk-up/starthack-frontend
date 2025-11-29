@@ -56,9 +56,9 @@ export default function SearchPage() {
 
       {/* Hero Section - Collapsed after search */}
       <section className={`relative container mx-auto px-6 transition-all ${hasSearched ? 'py-12' : 'py-24'}`}>
-        <div className={`mx-auto ${hasSearched ? 'max-w-4xl' : 'max-w-4xl'}`}>
+        <div className="flex flex-col items-center justify-center w-full">
           {!hasSearched && (
-            <div className="text-center mb-16">
+            <div className="text-center mb-16 w-full flex flex-col items-center">
               <h2 className="mb-6 text-5xl font-title font-light tracking-tight text-foreground">
                 State of the Art Procurement
               </h2>
@@ -69,15 +69,15 @@ export default function SearchPage() {
           )}
 
           {/* Search Bar */}
-          <div className={`${hasSearched ? 'max-w-2xl mx-auto' : 'max-w-3xl mx-auto'}`}>
-            <div className="flex gap-3 border rounded-xl p-3 bg-card/80 backdrop-blur-sm shadow-sm hover:shadow-md transition-shadow">
+          <div className={`flex justify-center w-full ${hasSearched ? 'max-w-2xl mx-auto' : 'max-w-3xl mx-auto'}`}>
+            <div className="flex gap-3 border rounded-xl p-3 bg-card/80 backdrop-blur-sm shadow-sm hover:shadow-md transition-shadow w-full">
               <Input
                 type="text"
                 placeholder="Search for products (e.g., laptops, steel, hoodies)..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-                className="border-0 bg-transparent text-base shadow-none focus-visible:ring-0 placeholder:text-muted-foreground/60"
+                className="border-0 bg-transparent text-base shadow-none focus-visible:ring-0 placeholder:text-muted-foreground/60 flex-1"
               />
               <Button onClick={handleSearch} size={hasSearched ? "default" : "lg"} variant="default" className="gap-2 px-6 shrink-0">
                 <Search className="h-4 w-4" />
