@@ -143,27 +143,14 @@ export default function SupplierDetailPage() {
                 <p className="text-base leading-relaxed">{offer.summary}</p>
               </div>
 
-              <div className="flex gap-4">
-                <Button 
-                  onClick={() => {
-                    const compareParams = new URLSearchParams(location.search);
-                    compareParams.append('offer', offer.id);
-                    navigate(`/compare?${compareParams.toString()}`);
-                  }} 
-                  className="flex-1" 
-                  variant="default" 
-                  size="lg"
-                >
-                  Add to Comparison
-                </Button>
-                <Button 
-                  onClick={() => navigate(-1)} 
-                  variant="outline" 
-                  size="lg"
-                >
-                  Back to Dashboard
-                </Button>
-              </div>
+              <Button 
+                onClick={() => navigate(-1)} 
+                variant="outline" 
+                size="lg"
+                className="w-full"
+              >
+                Back to Dashboard
+              </Button>
             </Card>
           )}
         </div>
