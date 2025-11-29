@@ -145,7 +145,11 @@ export default function SupplierDetailPage() {
 
               <div className="flex gap-4">
                 <Button 
-                  onClick={() => navigate('/compare')} 
+                  onClick={() => {
+                    const compareParams = new URLSearchParams(location.search);
+                    compareParams.append('offer', offer.id);
+                    navigate(`/compare?${compareParams.toString()}`);
+                  }} 
                   className="flex-1" 
                   variant="default" 
                   size="lg"
