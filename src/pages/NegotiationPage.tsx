@@ -15,17 +15,29 @@ export default function NegotiationPage() {
   const searchParams = new URLSearchParams(location.search);
   const selectedSupplierIds = searchParams.getAll('supplier');
   
-  const [activeCategory, setActiveCategory] = useState<ProductCategory>('computers');
-  const [isProcessing, setIsProcessing] = useState(false);
-
   const selectedSuppliers = mockSuppliers.filter((s) => selectedSupplierIds.includes(s.id));
-  const categorizedSuppliers = selectedSuppliers.filter((s) => s.category === activeCategory);
   
   // Calculate supplier counts per category
   const supplierCounts = selectedSuppliers.reduce((acc, supplier) => {
     acc[supplier.category] = (acc[supplier.category] || 0) + 1;
     return acc;
   }, {} as Record<string, number>);
+
+  // Auto-select the category with the most suppliers (or first available)
+  const getDefaultCategory = (): ProductCategory => {
+    if (selectedSuppliers.length === 0) return 'computers';
+    
+    // Find category with most suppliers
+    const categoriesWithCounts = Object.entries(supplierCounts)
+      .sort(([, a], [, b]) => b - a);
+    
+    return (categoriesWithCounts[0]?.[0] as ProductCategory) || 'computers';
+  };
+
+  const [activeCategory, setActiveCategory] = useState<ProductCategory>(getDefaultCategory());
+  const [isProcessing, setIsProcessing] = useState(false);
+
+  const categorizedSuppliers = selectedSuppliers.filter((s) => s.category === activeCategory);
 
   const handlePromptSubmit = (prompt: string) => {
     console.log('Prompt submitted:', prompt);
