@@ -1,6 +1,6 @@
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useState } from 'react';
-import { ArrowLeft, TrendingUp, Menu } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
@@ -87,7 +87,7 @@ export default function NegotiationPage() {
               <Button variant="ghost" size="icon" onClick={() => navigate('/')}>
                 <ArrowLeft className="h-5 w-5" />
               </Button>
-              <h1 className="text-2xl font-semibold tracking-tight">Negotiation Dashboard</h1>
+              <h1 className="text-2xl font-title font-light tracking-tight">Negotiation Dashboard</h1>
             </div>
             <Badge variant="secondary" className="px-4 py-2 text-sm font-medium rounded-full">
               {selectedSuppliers.length} Active Suppliers

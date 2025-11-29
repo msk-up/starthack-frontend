@@ -1,5 +1,5 @@
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
-import { ArrowLeft, MessageSquare, TrendingUp } from 'lucide-react';
+import { ArrowLeft, MessageSquare } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -34,8 +34,8 @@ export default function SupplierDetailPage() {
   if (!supplier) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <Card className="glass p-12 text-center">
-          <h2 className="text-2xl font-bold mb-4">Supplier Not Found</h2>
+        <Card className="p-8 text-center border">
+          <h2 className="text-xl font-semibold mb-4">Supplier Not Found</h2>
           <Button onClick={() => navigate(-1)} variant="default">
             Go Back
           </Button>
@@ -47,14 +47,14 @@ export default function SupplierDetailPage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="glass sticky top-0 z-50 border-b backdrop-blur-2xl">
-        <div className="container mx-auto px-6 py-5">
+      <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur-sm">
+        <div className="container mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
                 <ArrowLeft className="h-5 w-5" />
               </Button>
-              <h1 className="text-2xl font-semibold tracking-tight">Supplier Details</h1>
+              <h1 className="text-xl font-title font-light tracking-tight">Supplier Details</h1>
             </div>
           </div>
         </div>
@@ -63,14 +63,14 @@ export default function SupplierDetailPage() {
       <div className="container mx-auto p-6 max-w-5xl">
         <div className="space-y-6">
           {/* Status Card */}
-          <Card className="glass p-8 rounded-2xl shadow-2xl">
+          <Card className="p-6 border">
             <div className="mb-6 flex items-start justify-between">
               <div>
-                <h2 className="mb-2 text-3xl font-bold">{supplier.name}</h2>
-                <p className="text-muted-foreground text-lg">{supplier.location}</p>
+                <h2 className="mb-2 text-2xl font-title font-light">{supplier.name}</h2>
+                <p className="text-muted-foreground text-base">{supplier.location}</p>
               </div>
               {conversation && (
-                <Badge className="gap-2 px-4 py-2 rounded-xl bg-primary/10 text-primary border-primary/20 font-semibold">
+                <Badge variant="outline" className="px-3 py-1 text-sm font-medium">
                   {getStatusLabel(conversation.status)}
                 </Badge>
               )}
@@ -89,19 +89,19 @@ export default function SupplierDetailPage() {
           </Card>
 
           {/* Conversation Summary */}
-          <Card className="glass p-8 rounded-2xl shadow-2xl">
-            <h3 className="mb-6 text-xl font-bold">AI Conversation Summary</h3>
-            <div className="space-y-5">
-              <div className="rounded-2xl bg-muted/50 p-6 border-l-4 border-muted">
-                <p className="mb-2 text-xs font-bold text-muted-foreground uppercase tracking-wide">AI Agent</p>
-                <p className="text-base">
+          <Card className="p-6 border">
+            <h3 className="mb-5 text-lg font-semibold">AI Conversation Summary</h3>
+            <div className="space-y-4">
+              <div className="bg-muted/50 p-4 border-l-2 border-muted rounded-md">
+                <p className="mb-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">AI Agent</p>
+                <p className="text-sm">
                   Requested quote for bulk order with volume discount. Asked about delivery timeline and payment terms.
                 </p>
               </div>
               {conversation && (
-                <div className="rounded-2xl bg-primary/5 p-6 border-l-4 border-primary">
-                  <p className="mb-2 text-xs font-bold text-primary uppercase tracking-wide">Supplier Response</p>
-                  <p className="text-base">{conversation.lastMessage}</p>
+                <div className="bg-muted/30 p-4 border-l-2 border-foreground rounded-md">
+                  <p className="mb-2 text-xs font-medium text-foreground uppercase tracking-wide">Supplier Response</p>
+                  <p className="text-sm">{conversation.lastMessage}</p>
                 </div>
               )}
             </div>
@@ -110,37 +110,37 @@ export default function SupplierDetailPage() {
           {/* Offer Details */}
           {offer && (
             <Card className={cn(
-              'glass p-8 rounded-2xl shadow-2xl',
-              offer.isWinner && 'border-success border-2 ring-4 ring-success/20 shadow-success/20'
+              'p-6 border',
+              offer.isWinner && 'border-2'
             )}>
-              <div className="mb-6 flex items-start justify-between">
-                <h3 className="text-xl font-bold">Offer Details</h3>
+              <div className="mb-5 flex items-start justify-between">
+                <h3 className="text-lg font-semibold">Offer Details</h3>
                 {offer.isWinner && (
-                  <Badge className="bg-gradient-to-r from-success to-success/80 text-white border-0 px-4 py-2 shadow-lg rounded-xl text-base">
+                  <Badge variant="default" className="px-3 py-1 text-sm font-medium">
                     Winner
                   </Badge>
                 )}
               </div>
 
-              <div className="mb-8 space-y-4">
-                <div className="flex justify-between items-baseline rounded-2xl bg-primary/5 p-6">
-                  <span className="text-muted-foreground font-semibold text-lg">Price</span>
-                  <span className="text-4xl font-black text-foreground">
+              <div className="mb-6 space-y-3">
+                <div className="flex justify-between items-baseline bg-muted/30 p-4 rounded-md">
+                  <span className="text-muted-foreground font-medium text-base">Price</span>
+                  <span className="text-3xl font-semibold text-foreground">
                     ${offer.price.toLocaleString()}
                   </span>
                 </div>
-                <div className="flex justify-between items-center text-base rounded-xl bg-muted/30 p-4">
-                  <span className="text-muted-foreground font-semibold">Delivery Time</span>
-                  <span className="font-bold">{offer.deliveryTime}</span>
+                <div className="flex justify-between items-center text-sm bg-muted/50 p-3 rounded-md">
+                  <span className="text-muted-foreground font-medium">Delivery Time</span>
+                  <span className="font-semibold">{offer.deliveryTime}</span>
                 </div>
-                <div className="flex justify-between items-center text-base rounded-xl bg-muted/30 p-4">
-                  <span className="text-muted-foreground font-semibold">Terms</span>
-                  <span className="max-w-xs text-right font-bold">{offer.terms}</span>
+                <div className="flex justify-between items-center text-sm bg-muted/50 p-3 rounded-md">
+                  <span className="text-muted-foreground font-medium">Terms</span>
+                  <span className="max-w-xs text-right font-semibold">{offer.terms}</span>
                 </div>
               </div>
 
-              <div className="mb-6 rounded-2xl bg-muted/40 p-6 border border-muted">
-                <p className="text-base leading-relaxed">{offer.summary}</p>
+              <div className="mb-6 bg-muted/30 p-4 border rounded-md">
+                <p className="text-sm leading-relaxed">{offer.summary}</p>
               </div>
 
               <Button 

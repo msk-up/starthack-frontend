@@ -1,6 +1,6 @@
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useState } from 'react';
-import { ArrowLeft, TrendingUp, Trophy } from 'lucide-react';
+import { ArrowLeft, Trophy } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -48,17 +48,17 @@ export default function ComparePage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="glass sticky top-0 z-50 border-b backdrop-blur-2xl">
-        <div className="container mx-auto px-6 py-5">
+      <header className="sticky top-0 z-50 border-b bg-background/95 backdrop-blur-sm">
+        <div className="container mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
                 <ArrowLeft className="h-5 w-5" />
               </Button>
-              <h1 className="text-2xl font-semibold tracking-tight">Compare Offers</h1>
+              <h1 className="text-xl font-title font-light tracking-tight">Compare Offers</h1>
             </div>
             {!winner && remainingOffers.length > 0 && (
-              <Badge className="px-4 py-2 text-sm font-semibold rounded-full bg-primary/10 text-primary border-primary/20">
+              <Badge variant="secondary" className="px-3 py-1 text-sm font-medium">
                 {remainingOffers.length} Offer{remainingOffers.length !== 1 ? 's' : ''} Remaining
               </Badge>
             )}
@@ -70,84 +70,81 @@ export default function ComparePage() {
         {winner ? (
           // Winner Screen
           <div className="mx-auto max-w-3xl text-center">
-            <div className="animate-float mb-8">
-              <Trophy className="mx-auto mb-6 h-24 w-24 text-success drop-shadow-2xl" />
-            </div>
-            <h2 className="mb-4 text-5xl font-black text-foreground">Winner Selected!</h2>
-            <p className="mb-12 text-xl text-muted-foreground">
+            <Trophy className="mx-auto mb-6 h-16 w-16 text-foreground" />
+            <h2 className="mb-4 text-3xl font-title font-light text-foreground">Winner Selected</h2>
+            <p className="mb-8 text-base text-muted-foreground">
               This offer has been marked as the winner in your negotiation dashboard
             </p>
 
-            <Card className="glass mb-10 border-success border-2 p-10 ring-4 ring-success/30 shadow-2xl shadow-success/20 rounded-3xl">
-              <Badge className="mb-6 bg-gradient-to-r from-success to-success/80 text-white border-0 px-6 py-2 shadow-lg rounded-xl text-base">
+            <Card className="mb-10 border-2 p-8">
+              <Badge variant="default" className="mb-6 px-4 py-1.5 text-sm font-medium">
                 Best Offer
               </Badge>
-              <h3 className="mb-4 text-3xl font-bold">{winner.supplierName}</h3>
-              <p className="mb-8 text-5xl font-black text-foreground">
+              <h3 className="mb-4 text-2xl font-semibold">{winner.supplierName}</h3>
+              <p className="mb-8 text-4xl font-semibold text-foreground">
                 ${winner.price.toLocaleString()}
               </p>
 
-              <div className="space-y-4 text-left">
-                <div className="flex justify-between text-base rounded-xl bg-muted/30 p-4">
-                  <span className="text-muted-foreground font-semibold">Delivery Time</span>
-                  <span className="font-bold">{winner.deliveryTime}</span>
+              <div className="space-y-3 text-left">
+                <div className="flex justify-between text-sm bg-muted/50 p-4 rounded-md">
+                  <span className="text-muted-foreground font-medium">Delivery Time</span>
+                  <span className="font-semibold">{winner.deliveryTime}</span>
                 </div>
-                <div className="flex justify-between text-base rounded-xl bg-muted/30 p-4">
-                  <span className="text-muted-foreground font-semibold">Terms</span>
-                  <span className="max-w-xs text-right font-bold">{winner.terms}</span>
+                <div className="flex justify-between text-sm bg-muted/50 p-4 rounded-md">
+                  <span className="text-muted-foreground font-medium">Terms</span>
+                  <span className="max-w-xs text-right font-semibold">{winner.terms}</span>
                 </div>
               </div>
 
-              <div className="mt-8 rounded-2xl bg-muted/40 p-6 border border-muted">
-                <p className="text-base leading-relaxed">{winner.summary}</p>
+              <div className="mt-6 bg-muted/30 p-5 border rounded-md">
+                <p className="text-sm leading-relaxed">{winner.summary}</p>
               </div>
             </Card>
 
-            <Button size="lg" variant="default" onClick={handleFinish} className="px-12 text-base">
+            <Button size="lg" variant="default" onClick={handleFinish} className="px-8">
               Return to Dashboard
             </Button>
           </div>
         ) : currentPair ? (
           // Comparison Screen
           <div>
-            <div className="mb-12 text-center">
-              <h2 className="mb-4 text-4xl font-bold">Choose the Better Offer</h2>
-              <p className="text-xl text-muted-foreground">
+            <div className="mb-8 text-center">
+              <h2 className="mb-3 text-2xl font-title font-light">Choose the Better Offer</h2>
+              <p className="text-base text-muted-foreground">
                 Select the offer you prefer to continue to the next round
               </p>
             </div>
 
-            <div className="grid gap-8 md:grid-cols-2">
+            <div className="grid gap-6 md:grid-cols-2">
               {currentPair.map((offer, index) => (
                 <Card
                   key={offer.id}
                   className={cn(
-                    'glass glass-hover cursor-pointer p-10 transition-all hover:scale-[1.03] rounded-3xl shadow-2xl',
-                    'hover:border-primary/60'
+                    'cursor-pointer p-6 transition-all hover:border-foreground/30 border'
                   )}
                   onClick={() => handleSelect(offer)}
                 >
-                  <Badge className="mb-6 px-4 py-2 rounded-xl bg-secondary/10 text-secondary border-secondary/20 font-bold text-base">
+                  <Badge variant="outline" className="mb-4 px-3 py-1 text-sm font-medium">
                     Option {index + 1}
                   </Badge>
-                  <h3 className="mb-3 text-2xl font-bold">{offer.supplierName}</h3>
-                  <p className="mb-8 text-4xl font-black text-foreground">
+                  <h3 className="mb-3 text-xl font-semibold">{offer.supplierName}</h3>
+                  <p className="mb-6 text-3xl font-semibold text-foreground">
                     ${offer.price.toLocaleString()}
                   </p>
 
-                  <div className="mb-8 space-y-4">
-                    <div className="flex justify-between items-center text-base rounded-xl bg-muted/30 p-4">
-                      <span className="text-muted-foreground font-semibold">Delivery Time</span>
-                      <span className="font-bold">{offer.deliveryTime}</span>
+                  <div className="mb-6 space-y-3">
+                    <div className="flex justify-between items-center text-sm bg-muted/50 p-3 rounded-md">
+                      <span className="text-muted-foreground font-medium">Delivery Time</span>
+                      <span className="font-semibold">{offer.deliveryTime}</span>
                     </div>
-                    <div className="flex justify-between items-center text-base rounded-xl bg-muted/30 p-4">
-                      <span className="text-muted-foreground font-semibold">Terms</span>
-                      <span className="max-w-xs text-right font-bold">{offer.terms}</span>
+                    <div className="flex justify-between items-center text-sm bg-muted/50 p-3 rounded-md">
+                      <span className="text-muted-foreground font-medium">Terms</span>
+                      <span className="max-w-xs text-right font-semibold">{offer.terms}</span>
                     </div>
                   </div>
 
-                  <div className="rounded-2xl bg-muted/40 p-6 mb-6 border border-muted">
-                    <p className="text-base leading-relaxed">{offer.summary}</p>
+                  <div className="bg-muted/30 p-4 mb-4 border rounded-md">
+                    <p className="text-sm leading-relaxed">{offer.summary}</p>
                   </div>
 
                   <Button className="mt-4 w-full" variant="default" size="lg">

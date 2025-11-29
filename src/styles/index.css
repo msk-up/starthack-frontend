@@ -2,6 +2,14 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Font Definitions */
+@font-face {
+  font-family: 'Apple Garamond';
+  font-weight: 300;
+  font-style: normal;
+  src: local('Apple Garamond Light'), local('AppleGaramond-Light');
+}
+
 /* Elite minimal design system - Black/White/Gray only */
 
 @layer base {
@@ -66,6 +74,16 @@
   }
 
   body {
-    @apply bg-background text-foreground font-sans antialiased;
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  }
+
+  /* Title font - Apple Garamond Light with fallbacks */
+  h1, h2, h3, h4, h5, h6,
+  .font-title {
+    font-family: 'Apple Garamond', 'Garamond', 'Baskerville', 'Baskerville Old Face', 'Hoefler Text', 'Times New Roman', serif;
+    font-weight: 300;
+    letter-spacing: 0.01em;
   }
 }
+
