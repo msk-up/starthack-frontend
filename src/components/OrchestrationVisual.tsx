@@ -180,43 +180,42 @@ export default function OrchestrationVisual({
                 style={{ height: '112px' }}
               >
                 <Card className={cn(
-                  "glass p-4 rounded-xl border-2 transition-all duration-200 hover:shadow-lg hover:border-primary/50 h-full flex items-center",
-                  getStatusColor(supplier.status),
-                  isActive && "border-primary shadow-primary/20",
-                  supplier.hasNewUpdate && "border-success"
+                  "border bg-card transition-all duration-200 hover:border-foreground h-full flex items-center relative",
+                  isActive && "border-foreground"
                 )}>
-                  {/* New Update Badge */}
+                  {/* New Update Indicator - Subtle dot */}
                   {supplier.hasNewUpdate && (
-                    <div className="absolute -top-2 -right-2 z-10">
-                      <Badge className="bg-success text-white border-0 rounded-full px-3 py-1 text-xs shadow-lg">
-                        New
-                      </Badge>
+                    <div className="absolute top-3 right-3">
+                      <div className="w-2 h-2 rounded-full bg-foreground" />
                     </div>
                   )}
 
                   {/* Seat Label */}
-                  <div className="absolute -left-4 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-white font-bold text-lg shadow-lg z-10">
+                  <div className="absolute -left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-foreground flex items-center justify-center text-background font-semibold text-sm">
                     {String.fromCharCode(65 + index)}
                   </div>
 
-                  <div className="pl-10 pr-4 flex items-center justify-between gap-4 w-full">
+                  <div className="pl-8 pr-4 flex items-center justify-between gap-4 w-full">
                     <div className="flex-1 min-w-0 space-y-2">
-                      <div>
-                        <h4 className="font-bold text-lg truncate">{supplier.name}</h4>
-                        {supplier.lastUpdate && (
-                          <p className="text-xs text-muted-foreground">
-                            Last update: {supplier.lastUpdate.toLocaleTimeString()}
-                          </p>
+                      <div className="flex items-center gap-2">
+                        <h4 className="font-semibold text-base truncate">{supplier.name}</h4>
+                        {supplier.hasNewUpdate && (
+                          <span className="text-xs font-medium text-muted-foreground">• New</span>
                         )}
                       </div>
+                      {supplier.lastUpdate && (
+                        <p className="text-xs text-muted-foreground">
+                          Last update: {supplier.lastUpdate.toLocaleTimeString()}
+                        </p>
+                      )}
                       {/* Progress Bar */}
-                      <div className="w-full h-2 bg-muted/30 rounded-full overflow-hidden">
+                      <div className="w-full h-1 bg-muted rounded-full overflow-hidden">
                         <div 
                           className={cn(
-                            "h-full transition-all duration-500 rounded-full",
-                            supplier.status === 'offer_received' && "w-full bg-success",
-                            supplier.status === 'processing' && "w-2/3 bg-primary",
-                            supplier.status === 'waiting' && "w-1/3 bg-muted-foreground"
+                            "h-full transition-all duration-500 bg-foreground",
+                            supplier.status === 'offer_received' && "w-full",
+                            supplier.status === 'processing' && "w-2/3",
+                            supplier.status === 'waiting' && "w-1/3"
                           )}
                         />
                       </div>
