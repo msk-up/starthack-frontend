@@ -7,7 +7,6 @@ import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { NegotiationSidebar } from '@/components/NegotiationSidebar';
 import { mockSuppliers, mockConversations } from '@/lib/mockData';
 import { ProductCategory } from '@/types/procurement';
-import PromptInput from '@/components/PromptInput';
 import OrchestrationVisual from '@/components/OrchestrationVisual';
 
 export default function NegotiationPage() {
@@ -99,13 +98,12 @@ export default function NegotiationPage() {
 
           {/* Main Content Area */}
           <div className="flex-1 p-6 overflow-auto">
-            <div className="max-w-7xl mx-auto space-y-6">
-              <PromptInput onSubmit={handlePromptSubmit} isProcessing={isProcessing} />
-              
+            <div className="max-w-7xl mx-auto">
               <OrchestrationVisual 
                 suppliers={supplierSeats}
                 onSupplierClick={handleSupplierClick}
                 isProcessing={isProcessing}
+                onPromptSubmit={handlePromptSubmit}
               />
             </div>
           </div>

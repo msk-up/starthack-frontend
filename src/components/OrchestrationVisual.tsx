@@ -1,7 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Zap, CheckCircle, Clock, AlertCircle, MessageSquare } from 'lucide-react';
+import { Zap, CheckCircle, Clock, AlertCircle, MessageSquare, Send, Sparkles } from 'lucide-react';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
 
 interface SupplierSeat {
@@ -16,14 +18,17 @@ interface OrchestrationVisualProps {
   suppliers: SupplierSeat[];
   onSupplierClick: (id: string) => void;
   isProcessing: boolean;
+  onPromptSubmit: (prompt: string) => void;
 }
 
 export default function OrchestrationVisual({ 
   suppliers, 
   onSupplierClick,
-  isProcessing 
+  isProcessing,
+  onPromptSubmit
 }: OrchestrationVisualProps) {
   const [activeConnection, setActiveConnection] = useState<number | null>(null);
+  const [prompt, setPrompt] = useState('');
 
   useEffect(() => {
     if (isProcessing) {
@@ -37,6 +42,19 @@ export default function OrchestrationVisual({
       setActiveConnection(null);
     }
   }, [isProcessing, suppliers.length]);
+
+  const handleSubmit = () => {
+    if (prompt.trim() && !isProcessing) {
+      onPromptSubmit(prompt);
+      setPrompt('');
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) {
+      handleSubmit();
+    }
+  };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -69,21 +87,56 @@ export default function OrchestrationVisual({
       {/* Orchestration Agent - Left Side */}
       <div className="flex-shrink-0">
         <Card className={cn(
-          "glass p-8 rounded-2xl shadow-2xl border-2 transition-all duration-300 w-80",
+          "glass p-6 rounded-2xl shadow-2xl border-2 transition-all duration-300 w-96",
           isProcessing ? "border-primary glow-primary" : "border-border"
         )}>
-          <div className="flex flex-col items-center gap-4">
-            <div className={cn(
-              "rounded-2xl bg-gradient-to-br from-primary to-secondary p-4",
-              isProcessing && "animate-pulse"
-            )}>
-              <Zap className="h-8 w-8 text-white" />
+          <div className="flex flex-col gap-4">
+            {/* Agent Header */}
+            <div className="flex items-center gap-3">
+              <div className={cn(
+                "rounded-xl bg-gradient-to-br from-primary to-secondary p-3",
+                isProcessing && "animate-pulse"
+              )}>
+                <Zap className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <h3 className="font-bold text-lg">Orchestration Agent</h3>
+                <p className="text-xs text-muted-foreground">
+                  {isProcessing ? 'Distributing tasks...' : 'Ready'}
+                </p>
+              </div>
             </div>
-            <div className="text-center">
-              <h3 className="font-bold text-xl mb-1">Orchestration Agent</h3>
-              <p className="text-sm text-muted-foreground">
-                {isProcessing ? 'Distributing tasks...' : 'Ready'}
-              </p>
+
+            {/* Prompt Input */}
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-muted-foreground">
+                Negotiation Prompt
+              </label>
+              <div className="flex gap-2">
+                <Textarea
+                  value={prompt}
+                  onChange={(e) => setPrompt(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                  placeholder="e.g., Request best pricing for bulk order of 100 units..."
+                  className="min-h-[120px] resize-none glass border-2 focus:border-primary transition-all text-sm"
+                  disabled={isProcessing}
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <p className="text-xs text-muted-foreground">
+                  Cmd/Ctrl + Enter to send
+                </p>
+                <Button
+                  onClick={handleSubmit}
+                  disabled={!prompt.trim() || isProcessing}
+                  variant="gradientAccent"
+                  size="sm"
+                  className="gap-2"
+                >
+                  <Send className="h-4 w-4" />
+                  Send
+                </Button>
+              </div>
             </div>
           </div>
         </Card>
