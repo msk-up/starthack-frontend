@@ -233,17 +233,25 @@ export default function NegotiationPage() {
   };
 
   const handleStartNewNegotiation = () => {
-    // Clear any carried-over state and force re-render to a fresh prompt view
-    setResetKey((k) => k + 1);
-    navigate('/negotiation', {
-      replace: true,
-      state: {
-        suppliers: [],
-        negotiationPrompt: '',
-        negotiationTones: [],
-        resetAt: Date.now(),
-      },
-    });
+    const hasSuppliers = selectedSuppliers.length > 0;
+    const hasPromptState = !!negotiationPromptFromState;
+
+    if (hasSuppliers || hasPromptState) {
+      // Reset to a fresh negotiation panel in-place
+      setResetKey((k) => k + 1);
+      navigate('/negotiation', {
+        replace: true,
+        state: {
+          suppliers: [],
+          negotiationPrompt: '',
+          negotiationTones: [],
+          resetAt: Date.now(),
+        },
+      });
+    } else {
+      // Already fresh: return to home/search
+      navigate('/', { replace: true });
+    }
   };
 
   // Transform suppliers into seat format
