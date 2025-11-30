@@ -267,12 +267,26 @@ async def trigger_negotiations(request: NegotiationRequest) -> dict[str, Any]:
 @app.get("/conversation/{negotiation_id}/{supplier_id}")
 async def get_conversation(negotiation_id: str, supplier_id: str) -> dict[str, Any]:
     db = await get_pool()
-    messages = await db.fetch(
-        "SELECT * FROM message WHERE negotiation_id = $1 AND supplier_id = $2",
-        negotiation_id,
-        supplier_id,
-    )
-    return {"message": [dict(message) for message in messages]}
+    try:
+        # Try with negotiation_id first
+        messages = await db.fetch(
+            "SELECT * FROM message WHERE negotiation_id = $1 AND supplier_id = $2 ORDER BY created_at ASC, timestamp ASC",
+            negotiation_id,
+            supplier_id,
+        )
+        # If no results, try with ng_id
+        if not messages:
+            messages = await db.fetch(
+                "SELECT * FROM message WHERE ng_id = $1 AND supplier_id = $2 ORDER BY created_at ASC, timestamp ASC",
+                negotiation_id,
+                supplier_id,
+            )
+        return {"message": [dict(message) for message in messages]}
+    except Exception as e:
+        print(f"Error fetching conversation: {e}")
+        import traceback
+        traceback.print_exc()
+        return {"message": []}
 
 
 @app.get("/negotiation_status/{negotiation_id}")

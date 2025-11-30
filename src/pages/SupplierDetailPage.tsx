@@ -1,11 +1,14 @@
 import { useNavigate, useParams, useLocation } from 'react-router-dom';
-import { ArrowLeft, MessageSquare } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { ArrowLeft, MessageSquare, User, Bot } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { mockSuppliers, mockConversations, mockOffers } from '@/lib/mockData';
 import { Supplier } from '@/types/procurement';
+import { getConversation, type Message } from '@/lib/api';
 import { cn } from '@/lib/utils';
 
 interface SupplierWithProducts {
@@ -15,15 +18,25 @@ interface SupplierWithProducts {
   products: any[];
 }
 
+interface SupplierDetailState {
+  suppliers?: SupplierWithProducts[];
+  negotiationId?: string | number;
+}
+
 export default function SupplierDetailPage() {
   const navigate = useNavigate();
   const { supplierId } = useParams();
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
   const category = searchParams.get('category');
+  const negotiationIdFromUrl = searchParams.get('negotiation_id');
+
+  // Get state from location
+  const state = location.state as SupplierDetailState | undefined;
+  const negotiationId = state?.negotiationId || negotiationIdFromUrl;
 
   // Try to get supplier from location state (passed from NegotiationPage)
-  const suppliersFromState = (location.state as { suppliers?: SupplierWithProducts[] })?.suppliers;
+  const suppliersFromState = state?.suppliers;
   const supplierFromState = suppliersFromState?.find((s) => s.id === supplierId);
   
   // Fallback to mock data if not found in state
@@ -42,8 +55,46 @@ export default function SupplierDetailPage() {
       }
     : mockSupplier || null;
     
-  const conversation = mockConversations.find((c) => c.supplierId === supplierId);
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [loadingMessages, setLoadingMessages] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const mockConversation = mockConversations.find((c) => c.supplierId === supplierId);
   const offer = mockOffers.find((o) => o.supplierId === supplierId);
+  
+  // Auto-scroll to bottom when messages change
+  useEffect(() => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [messages]);
+
+  // Fetch messages from backend if negotiation_id is available
+  useEffect(() => {
+    const fetchMessages = async () => {
+      if (negotiationId && supplierId) {
+        setLoadingMessages(true);
+        try {
+          const fetchedMessages = await getConversation(String(negotiationId), String(supplierId));
+          
+          // Sort messages by timestamp
+          const sortedMessages = [...fetchedMessages].sort((a, b) => {
+            const timeA = new Date(a.timestamp || a.created_at || 0).getTime();
+            const timeB = new Date(b.timestamp || b.created_at || 0).getTime();
+            return timeA - timeB;
+          });
+          
+          setMessages(sortedMessages);
+          console.log('Fetched and sorted messages:', sortedMessages);
+        } catch (error) {
+          console.error('Error fetching messages:', error);
+        } finally {
+          setLoadingMessages(false);
+        }
+      }
+    };
+
+    fetchMessages();
+  }, [negotiationId, supplierId]);
 
   const getStatusLabel = (status: string) => {
     switch (status) {
@@ -98,42 +149,151 @@ export default function SupplierDetailPage() {
                   <p className="text-muted-foreground text-base">{supplier.location}</p>
                 )}
               </div>
-              {conversation && (
+              {(mockConversation || messages.length > 0) && (
                 <Badge variant="outline" className="px-3 py-1 text-sm font-medium">
-                  {getStatusLabel(conversation.status)}
+                  {mockConversation ? getStatusLabel(mockConversation.status) : 'Active'}
                 </Badge>
               )}
             </div>
 
-            {conversation && (
+            {mockConversation && (
               <>
                 <div className="mb-3">
-                  <Progress value={conversation.progress} className="h-3" />
+                  <Progress value={mockConversation.progress} className="h-3" />
                 </div>
                 <p className="text-sm text-muted-foreground font-medium">
-                  Last update: {conversation.timestamp.toLocaleTimeString()}
+                  Last update: {mockConversation.timestamp.toLocaleTimeString()}
                 </p>
               </>
             )}
           </Card>
 
-          {/* Conversation Summary */}
+          {/* Conversation Messages */}
           <Card className="p-6 border">
-            <h3 className="mb-5 text-lg font-semibold">AI Conversation Summary</h3>
-            <div className="space-y-4">
-              <div className="bg-muted/50 p-4 border-l-2 border-muted rounded-md">
-                <p className="mb-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">AI Agent</p>
-                <p className="text-sm">
-                  Requested quote for bulk order with volume discount. Asked about delivery timeline and payment terms.
-                </p>
-              </div>
-              {conversation && (
-                <div className="bg-muted/30 p-4 border-l-2 border-foreground rounded-md">
-                  <p className="mb-2 text-xs font-medium text-foreground uppercase tracking-wide">Supplier Response</p>
-                  <p className="text-sm">{conversation.lastMessage}</p>
-                </div>
+            <div className="mb-5 flex items-center justify-between">
+              <h3 className="text-lg font-semibold">Conversation</h3>
+              {negotiationId && (
+                <Badge variant="secondary" className="text-xs">
+                  Negotiation: {String(negotiationId).substring(0, 8)}...
+                </Badge>
               )}
             </div>
+            
+            {loadingMessages ? (
+              <div className="text-center py-8">
+                <p className="text-sm text-muted-foreground">Loading messages...</p>
+              </div>
+            ) : messages.length > 0 ? (
+              <ScrollArea className="h-[500px] pr-4">
+                <div className="space-y-3">
+                  {messages.map((message, index) => {
+                    // Determine if message is from negotiator/agent (our side) or supplier
+                    // Roles: 'agent', 'negotiator', 'user' = our side (left)
+                    // Roles: 'supplier', or no role but from supplier = supplier side (right)
+                    const role = (message.role || '').toLowerCase();
+                    const isNegotiator = role === 'agent' || role === 'negotiator' || role === 'user' || !role;
+                    const isSupplier = role === 'supplier' || role === 'supplier_response';
+                    
+                    // Default to negotiator if unclear, but prefer supplier if explicitly marked
+                    const isFromNegotiator = isNegotiator && !isSupplier;
+                    
+                    const messageContent = message.content || message.message || message.text || '';
+                    const timestamp = message.timestamp || message.created_at || message.sent_at || '';
+                    
+                    // Format timestamp
+                    const formatTime = (ts: string) => {
+                      if (!ts) return '';
+                      const date = new Date(ts);
+                      const now = new Date();
+                      const isToday = date.toDateString() === now.toDateString();
+                      
+                      if (isToday) {
+                        return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+                      }
+                      return date.toLocaleString('en-US', { 
+                        month: 'short', 
+                        day: 'numeric',
+                        hour: '2-digit', 
+                        minute: '2-digit' 
+                      });
+                    };
+                    
+                    return (
+                      <div
+                        key={message.message_id || message.id || index}
+                        className={cn(
+                          "flex gap-3 items-start",
+                          isFromNegotiator ? "justify-start" : "justify-end"
+                        )}
+                      >
+                        {isFromNegotiator && (
+                          <div className="w-8 h-8 rounded-full bg-foreground flex items-center justify-center flex-shrink-0 mt-1">
+                            <Bot className="h-4 w-4 text-background" />
+                          </div>
+                        )}
+                        <div className={cn(
+                          "max-w-[75%] rounded-2xl px-4 py-3 shadow-sm",
+                          isFromNegotiator 
+                            ? "bg-muted/60 rounded-tl-sm" 
+                            : "bg-foreground text-background rounded-tr-sm"
+                        )}>
+                          <div className="flex items-center gap-2 mb-1.5">
+                            <span className={cn(
+                              "text-xs font-semibold uppercase tracking-wide",
+                              isFromNegotiator ? "text-muted-foreground" : "text-background/80"
+                            )}>
+                              {isFromNegotiator ? 'Negotiator' : supplier.name}
+                            </span>
+                            {timestamp && (
+                              <span className={cn(
+                                "text-xs",
+                                isFromNegotiator ? "text-muted-foreground/70" : "text-background/70"
+                              )}>
+                                {formatTime(timestamp)}
+                              </span>
+                            )}
+                          </div>
+                          <p className={cn(
+                            "text-sm leading-relaxed whitespace-pre-wrap break-words",
+                            isFromNegotiator ? "text-foreground" : "text-background"
+                          )}>
+                            {messageContent}
+                          </p>
+                        </div>
+                        {!isFromNegotiator && (
+                          <div className="w-8 h-8 rounded-full bg-muted border-2 border-foreground/20 flex items-center justify-center flex-shrink-0 mt-1">
+                            <User className="h-4 w-4 text-foreground" />
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                  <div ref={messagesEndRef} />
+                </div>
+              </ScrollArea>
+            ) : mockConversation ? (
+              <div className="space-y-4">
+                <div className="bg-muted/50 p-4 border-l-2 border-muted rounded-md">
+                  <p className="mb-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">AI Agent</p>
+                  <p className="text-sm">
+                    Requested quote for bulk order with volume discount. Asked about delivery timeline and payment terms.
+                  </p>
+                </div>
+                <div className="bg-muted/30 p-4 border-l-2 border-foreground rounded-md">
+                  <p className="mb-2 text-xs font-medium text-foreground uppercase tracking-wide">Supplier Response</p>
+                  <p className="text-sm">{mockConversation.lastMessage}</p>
+                </div>
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <p className="text-sm text-muted-foreground">No conversation messages available</p>
+                {!negotiationId && (
+                  <p className="text-xs text-muted-foreground mt-2">
+                    Open this supplier from an active negotiation to see messages
+                  </p>
+                )}
+              </div>
+            )}
           </Card>
 
           {/* Offer Details */}

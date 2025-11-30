@@ -22,7 +22,7 @@ const TONE_OPTIONS: ToneOption[] = [
     name: 'Professional',
     description: 'Formal and business-focused approach',
     sampleMessages: [
-      'Dear [Supplier], I am reaching out regarding a potential bulk order opportunity. We are seeking competitive pricing for steel materials with delivery within Q1.',
+      'Dear [Supplier], I am reaching out regarding a potential business opportunity. We are interested in exploring a partnership and would appreciate the opportunity to discuss how we can work together.',
     ],
   },
   {
@@ -30,7 +30,7 @@ const TONE_OPTIONS: ToneOption[] = [
     name: 'Friendly',
     description: 'Warm and relationship-building tone',
     sampleMessages: [
-      'Hi [Supplier]! We\'ve heard great things about your company and would love to explore a partnership. Looking forward to discussing steel supply options with you.',
+      'Hi [Supplier]! We\'ve heard great things about your company and would love to explore a partnership. Looking forward to connecting with you and discussing how we can collaborate.',
     ],
   },
   {
@@ -38,7 +38,7 @@ const TONE_OPTIONS: ToneOption[] = [
     name: 'Direct',
     description: 'Straight to the point, efficiency-focused',
     sampleMessages: [
-      '[Supplier] - Need quote for steel bulk order. Quantity: 100 units. Timeline: 30 days. Please respond with best pricing.',
+      '[Supplier] - We are interested in your services and would like to receive a quote. Please provide your best pricing and availability. Thank you.',
     ],
   },
 ];

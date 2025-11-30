@@ -54,8 +54,8 @@ export function NegotiationSidebar({
 
   return (
     <Sidebar className="border-r">
-      <SidebarContent>
-        <SidebarGroup>
+      <SidebarContent className="flex flex-col h-full">
+        <SidebarGroup className="flex-shrink-0">
           <SidebarGroupLabel className="text-sm font-semibold px-4 py-3">
             Product Categories
           </SidebarGroupLabel>
@@ -82,14 +82,14 @@ export function NegotiationSidebar({
           </SidebarGroupContent>
         </SidebarGroup>
 
-        <SidebarSeparator />
+        <SidebarSeparator className="flex-shrink-0" />
 
-        <SidebarGroup>
-          <SidebarGroupLabel className="text-sm font-semibold px-4 py-3">
+        <SidebarGroup className="flex-1 flex flex-col min-h-0">
+          <SidebarGroupLabel className="text-sm font-semibold px-4 py-3 flex-shrink-0">
             Previous Negotiations
           </SidebarGroupLabel>
-          <SidebarGroupContent className="px-4">
-            <ScrollArea className="h-[400px]">
+          <SidebarGroupContent className="px-4 flex-1 min-h-0">
+            <ScrollArea className="h-full">
               {loadingNegotiations ? (
                 <div className="text-sm text-muted-foreground text-center py-4">
                   Loading...

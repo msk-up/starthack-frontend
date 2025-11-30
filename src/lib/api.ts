@@ -122,6 +122,51 @@ export async function getProducts(): Promise<ProductRow[]> {
   }
 }
 
+export interface Message {
+  message_id?: string;
+  negotiation_id?: string;
+  ng_id?: string;
+  supplier_id?: string;
+  sup_id?: string;
+  content?: string;
+  role?: string;
+  timestamp?: string;
+  created_at?: string;
+  [key: string]: any;
+}
+
+export interface ConversationResponse {
+  message: Message[];
+}
+
+/**
+ * Get conversation messages for a specific negotiation and supplier
+ */
+export async function getConversation(negotiationId: string, supplierId: string): Promise<Message[]> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/conversation/${negotiationId}/${supplierId}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      if (response.status === 404) {
+        return [];
+      }
+      throw new Error(`Failed to fetch conversation: ${response.statusText}`);
+    }
+
+    const data: ConversationResponse = await response.json();
+    return data.message || [];
+  } catch (error) {
+    console.error('Error fetching conversation:', error);
+    return [];
+  }
+}
+
+
 export interface Negotiation {
   negotiation_id: string | number;
   prompt: string;
@@ -236,13 +281,39 @@ export async function getNegotiations(): Promise<Negotiation[]> {
     // Try to fetch supplier_ids from agent table for each negotiation
     // This is a workaround since the backend doesn't return supplier_ids directly
     try {
-      for (const ng of negotiations) {
-        const statusResponse = await fetch(`${API_BASE_URL}/negotiation_status/${ng.negotiation_id}`);
-        if (statusResponse.ok) {
-          const statusData = await statusResponse.json();
-          ng.supplier_ids = (statusData.agents || []).map((a: any) => a.supplier_id);
+      // Use Promise.all to fetch all supplier_ids in parallel for better performance
+      const supplierPromises = negotiations.map(async (ng) => {
+        try {
+          const statusResponse = await fetch(`${API_BASE_URL}/negotiation_status/${ng.negotiation_id}`, {
+            method: 'GET',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+          });
+          
+          if (statusResponse.ok) {
+            const statusData = await statusResponse.json();
+            // Backend returns sup_id, but we need to handle both supplier_id and sup_id
+            const supplierIds = (statusData.agents || []).map((a: any) => {
+              return String(a.supplier_id || a.sup_id || '');
+            }).filter(id => id && id !== 'undefined' && id !== 'null');
+            return { negotiationId: ng.negotiation_id, supplierIds };
+          }
+        } catch (err) {
+          console.warn(`Failed to fetch supplier_ids for negotiation ${ng.negotiation_id}:`, err);
         }
-      }
+        return { negotiationId: ng.negotiation_id, supplierIds: [] };
+      });
+
+      const supplierResults = await Promise.all(supplierPromises);
+      
+      // Map supplier_ids back to negotiations
+      supplierResults.forEach((result) => {
+        const negotiation = negotiations.find(ng => String(ng.negotiation_id) === String(result.negotiationId));
+        if (negotiation) {
+          negotiation.supplier_ids = result.supplierIds;
+        }
+      });
     } catch (err) {
       console.warn('Could not fetch supplier_ids for negotiations:', err);
     }

@@ -1,10 +1,10 @@
-import { useNavigate, useLocation, Link } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { NegotiationSidebar } from '@/components/NegotiationSidebar';
+import { Navbar } from '@/components/Navbar';
 import { mockSuppliers, mockConversations } from '@/lib/mockData';
 import { ProductCategory, Supplier } from '@/types/procurement';
 import { createNegotiation, getNegotiations, getNegotiationById, getSuppliers, getProducts, type Negotiation } from '@/lib/api';
@@ -21,6 +21,7 @@ interface NegotiationState {
   suppliers?: (SupplierWithProducts | Supplier)[];
   negotiationPrompt?: string;
   negotiationTones?: string[];
+  fromHistory?: boolean; // Flag to indicate if coming from history page
 }
 
 export default function NegotiationPage() {
@@ -28,9 +29,11 @@ export default function NegotiationPage() {
   const location = useLocation();
   
   // Get suppliers from location state (passed from SearchPage) or fallback to URL params
-  const suppliersFromState = (location.state as NegotiationState | undefined)?.suppliers;
-  const negotiationPromptFromState = (location.state as NegotiationState | undefined)?.negotiationPrompt;
-  const negotiationTonesFromState = (location.state as NegotiationState | undefined)?.negotiationTones;
+  const negotiationState = location.state as NegotiationState | undefined;
+  const suppliersFromState = negotiationState?.suppliers;
+  const negotiationPromptFromState = negotiationState?.negotiationPrompt;
+  const negotiationTonesFromState = negotiationState?.negotiationTones;
+  const fromHistory = negotiationState?.fromHistory || false;
   
   // Convert SupplierWithProducts to Supplier format if needed
   const selectedSuppliers: Supplier[] = suppliersFromState 
@@ -72,6 +75,7 @@ export default function NegotiationPage() {
   const [previousNegotiations, setPreviousNegotiations] = useState<Negotiation[]>([]);
   const [loadingNegotiations, setLoadingNegotiations] = useState(true);
   const [resetKey, setResetKey] = useState(0);
+  const [currentNegotiationId, setCurrentNegotiationId] = useState<string | number | null>(null);
 
   const categorizedSuppliers = selectedSuppliers.filter((s) => s.category === activeCategory);
 
@@ -111,6 +115,11 @@ export default function NegotiationPage() {
       
       console.log('Negotiation created:', result);
       
+      // Store the negotiation ID for use in supplier detail pages
+      if (result.negotiation_id) {
+        setCurrentNegotiationId(result.negotiation_id);
+      }
+      
       // Refresh negotiations list
       try {
         const negotiations = await getNegotiations();
@@ -139,7 +148,8 @@ export default function NegotiationPage() {
           name: s.name,
           category: s.category,
           products: []
-        }))
+        })),
+        negotiationId: currentNegotiationId // Pass negotiation ID for fetching messages
       }
     });
   };
@@ -218,6 +228,9 @@ export default function NegotiationPage() {
         };
       });
 
+      // Set the current negotiation ID
+      setCurrentNegotiationId(negotiationId);
+      
       navigate('/negotiation', {
         state: {
           suppliers: mappedSuppliers,
@@ -233,25 +246,8 @@ export default function NegotiationPage() {
   };
 
   const handleStartNewNegotiation = () => {
-    const hasSuppliers = selectedSuppliers.length > 0;
-    const hasPromptState = !!negotiationPromptFromState;
-
-    if (hasSuppliers || hasPromptState) {
-      // Reset to a fresh negotiation panel in-place
-      setResetKey((k) => k + 1);
-      navigate('/negotiation', {
-        replace: true,
-        state: {
-          suppliers: [],
-          negotiationPrompt: '',
-          negotiationTones: [],
-          resetAt: Date.now(),
-        },
-      });
-    } else {
-      // Already fresh: return to home/search
-      navigate('/', { replace: true });
-    }
+    // Always go back to home/search page
+    navigate('/', { replace: true });
   };
 
   // Transform suppliers into seat format
@@ -283,29 +279,20 @@ export default function NegotiationPage() {
         {/* Main Content */}
         <div className="flex-1 flex flex-col">
       {/* Header */}
-      <header className="border-b bg-background/80 backdrop-blur-sm sticky top-0 z-50">
-        <div className="container mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Button variant="ghost" size="icon" onClick={handleStartNewNegotiation}>
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-              <h1 className="text-2xl font-title font-light tracking-tight">Negotiation Dashboard</h1>
-            </div>
-            <div className="flex items-center gap-4">
-              <Link 
-                to="/negotiations-history" 
-                className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-              >
-                View History
-              </Link>
-              <Badge variant="secondary" className="px-4 py-2 text-sm font-medium rounded-full">
-                {selectedSuppliers.length} Active Suppliers
-              </Badge>
-            </div>
-          </div>
+      <Navbar 
+        showBackButton 
+        onBackClick={handleStartNewNegotiation}
+        rightContent={
+          <Badge variant="secondary" className="px-4 py-2 text-sm font-medium rounded-full">
+            {selectedSuppliers.length} Active Suppliers
+          </Badge>
+        }
+      />
+      <div className="border-b bg-background/80 backdrop-blur-sm">
+        <div className="container mx-auto px-6 py-3">
+          <h1 className="text-2xl font-title font-light tracking-tight">Negotiation Dashboard</h1>
         </div>
-      </header>
+      </div>
 
           {/* Main Content Area */}
           <div className="flex-1 overflow-hidden">

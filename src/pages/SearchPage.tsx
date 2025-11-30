@@ -1,4 +1,4 @@
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { Search, Building2, Zap, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -7,7 +7,7 @@ import { Card } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
 import { Supplier, ProductCategory } from '@/types/procurement';
-import { Logo } from '@/components/Logo';
+import { Navbar } from '@/components/Navbar';
 import { searchProducts, getSuppliers, checkApiHealth, type Product } from '@/lib/api';
 
 interface SupplierWithProducts {
@@ -115,48 +115,47 @@ export default function SearchPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-muted/20 to-background relative">
-      {/* Subtle background pattern */}
+    <div className="min-h-screen bg-gradient-to-br from-background via-muted/20 to-background relative overflow-hidden">
+      {/* Animated background pattern */}
       <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(0,0,0,0.02)_0%,transparent_50%)] pointer-events-none" />
       
+      {/* Floating geometric shapes */}
+      {!hasSearched && (
+        <>
+          <div className="absolute top-20 left-10 w-72 h-72 bg-foreground/5 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '8s' }} />
+          <div className="absolute bottom-20 right-10 w-96 h-96 bg-foreground/5 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '10s', animationDelay: '2s' }} />
+          <div className="absolute top-1/2 left-1/4 w-64 h-64 bg-foreground/3 rounded-full blur-3xl animate-pulse" style={{ animationDuration: '12s', animationDelay: '4s' }} />
+        </>
+      )}
+      
       {/* Header */}
-      <header className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur-md">
-        <div className="container mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <Link to="/" className="cursor-pointer hover:opacity-80 transition-opacity">
-              <Logo className="text-foreground" />
-            </Link>
-            <nav className="flex items-center gap-4">
-              <Link 
-                to="/negotiations-history" 
-                className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
-              >
-                Negotiations History
-              </Link>
-            </nav>
-          </div>
-        </div>
-      </header>
+      <Navbar />
 
       {/* Hero Section - Collapsed after search */}
-      <section className={`relative container mx-auto px-6 transition-all ${hasSearched ? 'py-12' : 'py-24'}`}>
+      <section className={`relative container mx-auto px-6 transition-all duration-700 ${hasSearched ? 'py-12' : 'py-24'}`}>
         <div className="flex flex-col items-center justify-center w-full max-w-4xl mx-auto">
           {!hasSearched && (
-            <div className="text-center mb-8 w-full flex flex-col items-center">
-              <h2 className="mb-4 text-5xl font-title font-light tracking-tight text-foreground">
-                State of the Art Procurement
+            <div className="text-center mb-8 w-full flex flex-col items-center animate-in fade-in slide-in-from-bottom-8 duration-1000">
+              <h2 className="mb-4 text-5xl md:text-6xl font-title font-light tracking-tight text-foreground">
+                State of the Art
+                <span className="block mt-2 bg-gradient-to-r from-foreground via-foreground/80 to-foreground bg-clip-text text-transparent">
+                  Procurement
+                </span>
               </h2>
-              <p className="mb-8 text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed">
-              Search for products and connect with suppliers. Every purchase request is managed by specialized agents working in parallel.
+              <p className="mb-8 text-xl md:text-2xl text-muted-foreground max-w-2xl mx-auto leading-relaxed animate-in fade-in slide-in-from-bottom-6 duration-1000 delay-300">
+                Search for products and connect with suppliers. Every purchase request is managed by specialized agents working in parallel.
               </p>
             </div>
           )}
 
           {/* Search Bar */}
-          <div className={`flex justify-center w-full ${hasSearched ? 'max-w-2xl' : 'max-w-3xl'}`}>
-            <div className="flex gap-3 border rounded-xl p-3 bg-card/80 backdrop-blur-sm shadow-sm hover:shadow-md transition-shadow w-full relative overflow-hidden">
-              {/* Subtle gray gradient at bottom */}
-              <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-muted/30 to-transparent" />
+          <div className={`flex justify-center w-full transition-all duration-700 ${hasSearched ? 'max-w-2xl' : 'max-w-3xl'} animate-in fade-in slide-in-from-bottom-4 duration-1000 delay-500`}>
+            <div className="flex gap-3 border-2 rounded-2xl p-4 bg-card/90 backdrop-blur-md shadow-lg hover:shadow-xl hover:border-foreground/20 transition-all duration-300 w-full relative overflow-hidden group">
+              {/* Animated gradient border effect */}
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-foreground/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 -z-10" />
+              {/* Subtle shimmer effect */}
+              <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-muted/40 to-transparent group-hover:via-foreground/20 transition-colors duration-300" />
+              
               <Input
                 type="text"
                 placeholder="Search for products..."
@@ -168,16 +167,16 @@ export default function SearchPage() {
                   }
                 }}
                 disabled={isLoading}
-                className="border-0 bg-transparent text-base shadow-none focus-visible:ring-0 placeholder:text-muted-foreground/60 flex-1 relative z-10"
+                className="border-0 bg-transparent text-base md:text-lg shadow-none focus-visible:ring-0 placeholder:text-muted-foreground/60 flex-1 relative z-10"
               />
               <Button 
                 onClick={handleSearch} 
                 size={hasSearched ? "default" : "lg"} 
                 variant="default" 
-                className="gap-2 px-6 shrink-0 relative z-10"
+                className="gap-2 px-6 md:px-8 shrink-0 relative z-10 hover:scale-105 transition-transform duration-200"
                 disabled={isLoading}
               >
-                <Search className="h-4 w-4" />
+                <Search className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
                 {isLoading ? 'Searching...' : 'Search'}
               </Button>
             </div>
@@ -188,46 +187,48 @@ export default function SearchPage() {
       {/* Landing Page Content - Only shown when not searched */}
       {!hasSearched && (
         <section className="relative container mx-auto px-6 pb-24">
-          <div className="max-w-4xl mx-auto">
-            <div className="grid md:grid-cols-3 gap-8 mt-16">
+          <div className="max-w-5xl mx-auto">
+            <div className="grid md:grid-cols-3 gap-8 mt-20">
               {/* Feature 1 */}
-              <div className="text-center">
-                <div className="w-16 h-16 rounded-full bg-muted/50 mx-auto mb-4 flex items-center justify-center">
-                  <Building2 className="h-8 w-8 text-foreground" />
+              <div className="text-center group animate-in fade-in slide-in-from-bottom-4 duration-1000 delay-700">
+                <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-muted/60 to-muted/30 mx-auto mb-6 flex items-center justify-center shadow-lg group-hover:shadow-xl group-hover:scale-110 transition-all duration-300">
+                  <Building2 className="h-10 w-10 text-foreground group-hover:scale-110 transition-transform duration-300" />
                 </div>
-                <h3 className="text-xl font-title font-light mb-3">Smart Matching</h3>
-                <p className="text-sm text-muted-foreground leading-relaxed">
+                <h3 className="text-2xl font-title font-light mb-4 group-hover:text-foreground transition-colors">Smart Matching</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed group-hover:text-foreground/80 transition-colors">
                   AI-powered supplier matching connects you with the best vendors for your specific needs
                 </p>
               </div>
 
               {/* Feature 2 */}
-              <div className="text-center">
-                <div className="w-16 h-16 rounded-full bg-muted/50 mx-auto mb-4 flex items-center justify-center">
-                  <Search className="h-8 w-8 text-foreground" />
+              <div className="text-center group animate-in fade-in slide-in-from-bottom-4 duration-1000 delay-900">
+                <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-muted/60 to-muted/30 mx-auto mb-6 flex items-center justify-center shadow-lg group-hover:shadow-xl group-hover:scale-110 transition-all duration-300">
+                  <Zap className="h-10 w-10 text-foreground group-hover:scale-110 transition-transform duration-300" />
                 </div>
-                <h3 className="text-xl font-title font-light mb-3">Parallel Negotiations</h3>
-                <p className="text-sm text-muted-foreground leading-relaxed">
+                <h3 className="text-2xl font-title font-light mb-4 group-hover:text-foreground transition-colors">Parallel Negotiations</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed group-hover:text-foreground/80 transition-colors">
                   Multiple specialized agents work simultaneously to negotiate the best terms for your procurement
                 </p>
               </div>
 
               {/* Feature 3 */}
-              <div className="text-center">
-                <div className="w-16 h-16 rounded-full bg-muted/50 mx-auto mb-4 flex items-center justify-center">
-                  <Clock className="h-8 w-8 text-foreground" />
+              <div className="text-center group animate-in fade-in slide-in-from-bottom-4 duration-1000 delay-1100">
+                <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-muted/60 to-muted/30 mx-auto mb-6 flex items-center justify-center shadow-lg group-hover:shadow-xl group-hover:scale-110 transition-all duration-300">
+                  <Clock className="h-10 w-10 text-foreground group-hover:scale-110 transition-transform duration-300" />
                 </div>
-                <h3 className="text-xl font-title font-light mb-3">Real-time Updates</h3>
-                <p className="text-sm text-muted-foreground leading-relaxed">
+                <h3 className="text-2xl font-title font-light mb-4 group-hover:text-foreground transition-colors">Real-time Updates</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed group-hover:text-foreground/80 transition-colors">
                   Track all negotiations in real-time with instant notifications and progress updates
                 </p>
               </div>
             </div>
 
             {/* Additional Content Section */}
-            <div className="mt-24 text-center">
-              <h3 className="text-3xl font-title font-light mb-6">Streamline Your Procurement</h3>
-              <p className="text-lg text-muted-foreground max-w-2xl mx-auto leading-relaxed">
+            <div className="mt-32 text-center animate-in fade-in slide-in-from-bottom-4 duration-1000 delay-1300">
+              <h3 className="text-4xl md:text-5xl font-title font-light mb-8 bg-gradient-to-r from-foreground via-foreground/90 to-foreground bg-clip-text text-transparent">
+                Streamline Your Procurement
+              </h3>
+              <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto leading-relaxed">
                 Our platform automates the entire procurement process, from supplier discovery to final negotiation, 
                 saving you time and ensuring you get the best deals.
               </p>

@@ -1,12 +1,11 @@
 import { useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import { ArrowLeft, Clock, MessageSquare, Search } from 'lucide-react';
+import { Clock, MessageSquare, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
-import { Logo } from '@/components/Logo';
-import { Link } from 'react-router-dom';
+import { Navbar } from '@/components/Navbar';
 import { getNegotiations, getNegotiationById, getSuppliers, getProducts, type Negotiation } from '@/lib/api';
 import { Supplier, ProductCategory } from '@/types/procurement';
 import { cn } from '@/lib/utils';
@@ -23,6 +22,11 @@ export default function NegotiationsHistoryPage() {
       try {
         setLoading(true);
         const data = await getNegotiations();
+        console.log('Fetched negotiations:', data);
+        // Log supplier_ids for debugging
+        data?.forEach(ng => {
+          console.log(`Negotiation ${ng.negotiation_id} has ${ng.supplier_ids.length} suppliers:`, ng.supplier_ids);
+        });
         setNegotiations(data || []);
       } catch (error) {
         console.error('Error fetching negotiations:', error);
@@ -64,11 +68,15 @@ export default function NegotiationsHistoryPage() {
 
   const handleNegotiationClick = async (negotiationId: string | number) => {
     try {
+      console.log('Opening negotiation:', negotiationId);
       const negotiation = await getNegotiationById(negotiationId);
       if (!negotiation) {
         console.warn('Negotiation not found', negotiationId);
         return;
       }
+
+      console.log('Negotiation data:', negotiation);
+      console.log('Supplier IDs:', negotiation.supplier_ids);
 
       let supplierList: any[] = [];
       let products: any[] = [];
@@ -77,11 +85,13 @@ export default function NegotiationsHistoryPage() {
         supplierList = Array.isArray(apiSuppliers)
           ? apiSuppliers
           : (apiSuppliers as any)?.suppliers || [];
+        console.log('Fetched suppliers:', supplierList.length);
       } catch (err) {
         console.warn('Failed to fetch suppliers, falling back to ids only', err);
       }
       try {
         products = await getProducts();
+        console.log('Fetched products:', products.length);
       } catch (err) {
         console.warn('Failed to fetch products for supplier names', err);
       }
@@ -106,10 +116,18 @@ export default function NegotiationsHistoryPage() {
 
       const mappedSuppliers: Supplier[] = (negotiation.supplier_ids || []).map((id) => {
         const key = String(id).trim();
+        if (!key || key === 'undefined' || key === 'null') {
+          console.warn('Invalid supplier ID:', id);
+          return null;
+        }
 
         // Always try to derive the name from products by supplier_id
-        const productMatch = products.find((p: any) => p?.supplier_id === key);
+        const productMatch = products.find((p: any) => {
+          const pSupplierId = String(p?.supplier_id || '').trim();
+          return pSupplierId === key;
+        });
         if (productMatch) {
+          console.log(`Found supplier ${key} in products:`, productMatch.supplier_name);
           return {
             id: key,
             name: productMatch.supplier_name || `Supplier ${key}`,
@@ -123,8 +141,12 @@ export default function NegotiationsHistoryPage() {
 
         // Fallback to supplier map
         const match = supplierMap.get(key);
-        if (match) return match;
+        if (match) {
+          console.log(`Found supplier ${key} in supplier map:`, match.name);
+          return match;
+        }
 
+        console.warn(`Could not find supplier ${key}, using fallback`);
         return {
           id: key,
           name: `Supplier ${key}`,
@@ -134,13 +156,22 @@ export default function NegotiationsHistoryPage() {
           priceRange: '',
           location: '',
         };
-      });
+      }).filter((s): s is Supplier => s !== null);
+
+      console.log('Mapped suppliers:', mappedSuppliers.length, mappedSuppliers);
+
+      if (mappedSuppliers.length === 0) {
+        console.error('No suppliers found for negotiation!', negotiation);
+        alert('No suppliers found for this negotiation. Please check the backend data.');
+        return;
+      }
 
       navigate('/negotiation', {
         state: {
           suppliers: mappedSuppliers,
           negotiationPrompt: negotiation.prompt,
           negotiationTones: negotiation.modes || [],
+          fromHistory: true, // Flag to indicate this came from history page
         },
       });
     } catch (error) {
@@ -165,25 +196,15 @@ export default function NegotiationsHistoryPage() {
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="sticky top-0 z-50 border-b bg-background/80 backdrop-blur-md">
-        <div className="container mx-auto px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-4">
-              <Button variant="ghost" size="icon" onClick={() => navigate('/')}>
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-              <Link to="/" className="cursor-pointer hover:opacity-80 transition-opacity">
-                <Logo className="text-foreground" />
-              </Link>
-            </div>
-            <div className="flex items-center gap-4">
-              <Badge variant="secondary" className="px-4 py-2 text-sm font-medium rounded-full">
-                {filteredNegotiations.length} Negotiation{filteredNegotiations.length !== 1 ? 's' : ''}
-              </Badge>
-            </div>
-          </div>
-        </div>
-      </header>
+      <Navbar 
+        showBackButton 
+        onBackClick={() => navigate('/')}
+        rightContent={
+          <Badge variant="secondary" className="px-4 py-2 text-sm font-medium rounded-full">
+            {filteredNegotiations.length} Negotiation{filteredNegotiations.length !== 1 ? 's' : ''}
+          </Badge>
+        }
+      />
 
       {/* Main Content */}
       <div className="container mx-auto px-6 py-8">
