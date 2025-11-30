@@ -58,7 +58,7 @@ export default function TinderToneSelector({ supplierNames, onComplete }: Tinder
   }
 
   const handleSwipe = (liked: boolean) => {
-    if (!currentTone) return;
+    if (!currentTone || swipeDirection || isComplete) return;
     
     setSwipeDirection(liked ? 'right' : 'left');
     

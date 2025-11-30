@@ -37,6 +37,7 @@ export default function OrchestrationVisual({
   const [supplierStates, setSupplierStates] = useState<Record<string, { unreadCount: number; hasOutcome: boolean }>>({});
   const [selectedTones, setSelectedTones] = useState<string[]>([]);
   const [hasPromptBeenSent, setHasPromptBeenSent] = useState(false);
+  const [toneSelectorKey, setToneSelectorKey] = useState(0);
   const animationStarted = useRef(false);
   const hasInitiatedNegotiation = useRef(false);
 
@@ -75,6 +76,14 @@ export default function OrchestrationVisual({
 
   const handleSubmit = () => {
     if (prompt.trim() && !isProcessing && !hasInitiatedNegotiation.current && suppliers.length > 0) {
+      console.log('[Orchestration] starting negotiation', {
+        prompt,
+        suppliers: suppliers.map((s) => ({ id: s.id, name: s.name, status: s.status })),
+        isProcessing,
+        hasInitiatedNegotiation: hasInitiatedNegotiation.current,
+        showToneSelector,
+      });
+      setToneSelectorKey((k) => k + 1); // force remount for a fresh flow
       setShowToneSelector(true);
     }
   };
@@ -133,8 +142,13 @@ export default function OrchestrationVisual({
 
   return (
     <>
+      {(() => {
+        console.log('[Orchestration render]', { showToneSelector, suppliersLen: suppliers.length });
+        return null;
+      })()}
       {showToneSelector && suppliers.length > 0 && (
         <TinderToneSelector
+          key={toneSelectorKey}
           supplierNames={suppliers.map(s => s.name).filter(Boolean)}
           onComplete={handleToneSelectionComplete}
         />
