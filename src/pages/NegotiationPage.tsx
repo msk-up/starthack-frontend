@@ -71,6 +71,7 @@ export default function NegotiationPage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [previousNegotiations, setPreviousNegotiations] = useState<Negotiation[]>([]);
   const [loadingNegotiations, setLoadingNegotiations] = useState(true);
+  const [resetKey, setResetKey] = useState(0);
 
   const categorizedSuppliers = selectedSuppliers.filter((s) => s.category === activeCategory);
 
@@ -231,6 +232,20 @@ export default function NegotiationPage() {
     }
   };
 
+  const handleStartNewNegotiation = () => {
+    // Clear any carried-over state and force re-render to a fresh prompt view
+    setResetKey((k) => k + 1);
+    navigate('/negotiation', {
+      replace: true,
+      state: {
+        suppliers: [],
+        negotiationPrompt: '',
+        negotiationTones: [],
+        resetAt: Date.now(),
+      },
+    });
+  };
+
   // Transform suppliers into seat format
   const supplierSeats = categorizedSuppliers.map(supplier => {
     const conv = mockConversations.find(c => c.supplierId === supplier.id);
@@ -264,7 +279,7 @@ export default function NegotiationPage() {
         <div className="container mx-auto px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <Button variant="ghost" size="icon" onClick={() => navigate('/')}>
+              <Button variant="ghost" size="icon" onClick={handleStartNewNegotiation}>
                 <ArrowLeft className="h-5 w-5" />
               </Button>
               <h1 className="text-2xl font-title font-light tracking-tight">Negotiation Dashboard</h1>
@@ -288,6 +303,7 @@ export default function NegotiationPage() {
                   initialPrompt={negotiationPromptFromState}
                   initialTones={negotiationTonesFromState}
                   initialHasPromptBeenSent={!!negotiationPromptFromState}
+                  key={resetKey}
                 />
               </div>
             </div>
