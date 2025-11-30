@@ -109,7 +109,7 @@ export default function SearchPage() {
       
       // Pass suppliers via state instead of just IDs
       navigate('/negotiation', {
-        state: { suppliers: selectedSupplierObjects }
+        state: { suppliers: selectedSupplierObjects, product: searchQuery }
       });
     }
   };

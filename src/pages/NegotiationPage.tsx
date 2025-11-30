@@ -1,21 +1,33 @@
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
+import { SidebarProvider } from '@/components/ui/sidebar';
 import { NegotiationSidebar } from '@/components/NegotiationSidebar';
 import { Navbar } from '@/components/Navbar';
 import { mockSuppliers, mockConversations } from '@/lib/mockData';
 import { ProductCategory, Supplier } from '@/types/procurement';
-import { createNegotiation, getNegotiations, getNegotiationById, getSuppliers, getProducts, type Negotiation } from '@/lib/api';
+import { createNegotiation, getNegotiations, getNegotiationById, getSuppliers, getProducts, getNegotiationTactics, getNegotiationStatus, type Negotiation, type NegotiationStatusResponse, type ProductRow } from '@/lib/api';
 import OrchestrationVisual from '@/components/OrchestrationVisual';
 
 interface SupplierWithProducts {
   id: string;
   name: string;
   category: ProductCategory;
-  products: any[];
+  products: unknown[];
 }
+
+type BackendSupplierLike = {
+  supplier_id?: string | number | null;
+  id?: string | number | null;
+  supplier_name?: string | null;
+  category?: ProductCategory;
+  rating?: number;
+  response_time?: string;
+  responseTime?: string;
+  price_range?: string;
+  priceRange?: string;
+  location?: string;
+};
 
 interface NegotiationState {
   suppliers?: (SupplierWithProducts | Supplier)[];
@@ -23,6 +35,7 @@ interface NegotiationState {
   negotiationTones?: string[];
   negotiationId?: string | number; // Negotiation ID for fetching messages
   fromHistory?: boolean; // Flag to indicate if coming from history page
+  product?: string; // The typed product from the first page
 }
 
 export default function NegotiationPage() {
@@ -35,7 +48,7 @@ export default function NegotiationPage() {
   const negotiationPromptFromState = negotiationState?.negotiationPrompt;
   const negotiationTonesFromState = negotiationState?.negotiationTones;
   const negotiationIdFromState = negotiationState?.negotiationId;
-  const fromHistory = negotiationState?.fromHistory || false;
+  const productFromState = negotiationState?.product || '';
   
   // Convert SupplierWithProducts to Supplier format if needed
   const selectedSuppliers: Supplier[] = suppliersFromState 
@@ -76,8 +89,11 @@ export default function NegotiationPage() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [previousNegotiations, setPreviousNegotiations] = useState<Negotiation[]>([]);
   const [loadingNegotiations, setLoadingNegotiations] = useState(true);
-  const [resetKey, setResetKey] = useState(0);
+  const [resetKey] = useState(0);
   const [currentNegotiationId, setCurrentNegotiationId] = useState<string | number | null>(null);
+  const [previewJson, setPreviewJson] = useState<Record<string, unknown> | null>(null);
+  const [negotiationStatusJson, setNegotiationStatusJson] = useState<NegotiationStatusResponse | null>(null);
+  const [initialPromptFromApi, setInitialPromptFromApi] = useState<string | undefined>(undefined);
 
   // Set currentNegotiationId from state if available (when loading from history)
   useEffect(() => {
@@ -106,6 +122,35 @@ export default function NegotiationPage() {
     fetchNegotiations();
   }, []);
 
+  // Fetch negotiation tactics/prompt for preview JSON
+  useEffect(() => {
+    const run = async () => {
+      try {
+        const data = await getNegotiationTactics();
+        const prompt = (data?.prompt && String(data.prompt)) || '';
+        setInitialPromptFromApi(prompt || negotiationPromptFromState);
+      } catch (e) {
+        setInitialPromptFromApi(negotiationPromptFromState);
+      }
+    };
+    run();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Build preview JSON when inputs change
+  useEffect(() => {
+    const supplierIds = selectedSuppliers.map((s) => s.id);
+    const tacticsJoined = (negotiationTonesFromState || []).join(', ');
+    const prompt = initialPromptFromApi || negotiationPromptFromState || '';
+    const preview = {
+      product: productFromState || '',
+      prompt: prompt,
+      tactics: tacticsJoined,
+      suppliers: supplierIds,
+    };
+    setPreviewJson(preview);
+  }, [selectedSuppliers, productFromState, negotiationTonesFromState, negotiationPromptFromState, initialPromptFromApi]);
+
   const handlePromptSubmit = async (prompt: string, tones: string[] = []) => {
     console.log('Prompt submitted:', prompt, 'Tones:', tones);
     setIsProcessing(true);
@@ -120,6 +165,7 @@ export default function NegotiationPage() {
         supplier_ids: supplierIds,
         modes: tones, // Use tones from TinderToneSelector
         status: 'pending',
+        product: productFromState || ''
       });
       
       console.log('Negotiation created:', result);
@@ -148,6 +194,42 @@ export default function NegotiationPage() {
     }
   };
 
+  // Poll negotiation_status every 3 seconds when we have a currentNegotiationId
+  useEffect(() => {
+    let intervalId: number | undefined;
+    let stopped = false;
+
+    const poll = async () => {
+      if (!currentNegotiationId) return;
+      try {
+        const res = await getNegotiationStatus(String(currentNegotiationId));
+        if (res) {
+          setNegotiationStatusJson(res);
+          // Stop polling if backend reports completion
+          if (res.all_completed) {
+            if (intervalId) window.clearInterval(intervalId);
+            intervalId = undefined;
+            stopped = true;
+          }
+        }
+      } catch (e) {
+        console.warn('Polling negotiation_status failed', e);
+      }
+    };
+
+    if (currentNegotiationId) {
+      // Immediate fetch
+      poll();
+      // Then interval
+      intervalId = window.setInterval(poll, 3000);
+    }
+
+    return () => {
+      if (intervalId) window.clearInterval(intervalId);
+      stopped = true;
+    };
+  }, [currentNegotiationId]);
+
   const handleSupplierClick = (supplierId: string) => {
     // Navigate to detail view with supplier ID and category, passing supplier data via state
     navigate(`/negotiation/${supplierId}?category=${activeCategory}`, {
@@ -171,13 +253,16 @@ export default function NegotiationPage() {
         return;
       }
 
-      let supplierList: any[] = [];
-      let products: any[] = [];
+      let supplierList: BackendSupplierLike[] = [];
+      let products: ProductRow[] = [];
       try {
         const apiSuppliers = await getSuppliers();
-        supplierList = Array.isArray(apiSuppliers)
-          ? apiSuppliers
-          : (apiSuppliers as any)?.suppliers || [];
+        if (Array.isArray(apiSuppliers)) {
+          supplierList = apiSuppliers as unknown as BackendSupplierLike[];
+        } else if (apiSuppliers && typeof apiSuppliers === 'object') {
+          const maybeWrapped = apiSuppliers as { suppliers?: BackendSupplierLike[] };
+          supplierList = Array.isArray(maybeWrapped.suppliers) ? maybeWrapped.suppliers : [];
+        }
       } catch (err) {
         console.warn('Failed to fetch suppliers, falling back to ids only', err);
       }
@@ -189,14 +274,14 @@ export default function NegotiationPage() {
 
       // Normalize supplier list for easier lookup
       const supplierMap = new Map<string, Supplier>();
-      supplierList.forEach((s: any) => {
-        const id = String(s?.supplier_id || s?.id || s?.supplier_name || '').trim();
+      supplierList.forEach((s) => {
+        const id = String(s?.supplier_id ?? s?.id ?? s?.supplier_name ?? '').trim();
         if (!id) return;
         const normalized: Supplier = {
           id,
-          name: s?.supplier_name || s?.name || id,
-          category: (s?.category as ProductCategory) || 'electronics',
-          rating: s?.rating || 0,
+          name: s?.supplier_name || id,
+          category: s?.category || 'electronics',
+          rating: s?.rating ?? 0,
           responseTime: s?.response_time || s?.responseTime || '',
           priceRange: s?.price_range || s?.priceRange || '',
           location: s?.location || '',
@@ -209,7 +294,7 @@ export default function NegotiationPage() {
         const key = String(id).trim();
 
         // Always try to derive the name from products by supplier_id
-        const productMatch = products.find((p: any) => p?.supplier_id === key);
+        const productMatch = products.find((p: ProductRow) => p?.supplier_id === key);
         if (productMatch) {
           return {
             id: key,
@@ -256,7 +341,6 @@ export default function NegotiationPage() {
   };
 
   const handleStartNewNegotiation = () => {
-    // Always go back to home/search page
     navigate('/', { replace: true });
   };
 
@@ -313,9 +397,11 @@ export default function NegotiationPage() {
                   onSupplierClick={handleSupplierClick}
                   isProcessing={isProcessing}
                   onPromptSubmit={handlePromptSubmit}
-                  initialPrompt={negotiationPromptFromState}
+                  initialPrompt={initialPromptFromApi || negotiationPromptFromState}
                   initialTones={negotiationTonesFromState}
                   initialHasPromptBeenSent={!!negotiationPromptFromState}
+                  previewJson={previewJson}
+                  negotiationStatus={negotiationStatusJson}
                   key={resetKey}
                 />
               </div>

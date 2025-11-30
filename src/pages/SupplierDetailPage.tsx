@@ -1,21 +1,21 @@
-import { useNavigate, useParams, useLocation } from 'react-router-dom';
-import { useState, useEffect, useRef } from 'react';
-import { ArrowLeft, MessageSquare, User, Bot } from 'lucide-react';
-import { Button } from '@/components/ui/button';
-import { Card } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Progress } from '@/components/ui/progress';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { mockSuppliers, mockConversations, mockOffers } from '@/lib/mockData';
-import { Supplier } from '@/types/procurement';
-import { getConversation, type Message } from '@/lib/api';
-import { cn } from '@/lib/utils';
+import {useLocation, useNavigate, useParams} from 'react-router-dom';
+import {useEffect, useRef, useState} from 'react';
+import {ArrowLeft, Bot, Clock, User} from 'lucide-react';
+import {Button} from '@/components/ui/button';
+import {Card} from '@/components/ui/card';
+import {Badge} from '@/components/ui/badge';
+import {Progress} from '@/components/ui/progress';
+// We avoid inner scroll areas for the conversation so the whole page scrolls
+import {mockConversations, mockOffers, mockSuppliers} from '@/lib/mockData';
+import {ProductCategory, Supplier} from '@/types/procurement';
+import {getConversation, type Message} from '@/lib/api';
+import {cn} from '@/lib/utils';
 
 interface SupplierWithProducts {
   id: string;
   name: string;
-  category: string;
-  products: any[];
+  category: ProductCategory;
+  products: unknown[];
 }
 
 interface SupplierDetailState {
@@ -28,7 +28,6 @@ export default function SupplierDetailPage() {
   const { supplierId } = useParams();
   const location = useLocation();
   const searchParams = new URLSearchParams(location.search);
-  const category = searchParams.get('category');
   const negotiationIdFromUrl = searchParams.get('negotiation_id');
 
   // Get state from location
@@ -49,7 +48,6 @@ export default function SupplierDetailPage() {
   const suppliersFromState = state?.suppliers;
   const supplierFromState = suppliersFromState?.find((s) => s.id === supplierId);
   
-  // Fallback to mock data if not found in state
   const mockSupplier = mockSuppliers.find((s) => s.id === supplierId);
   
   // Use supplier from state if available, otherwise use mock
@@ -57,7 +55,7 @@ export default function SupplierDetailPage() {
     ? {
         id: supplierFromState.id,
         name: supplierFromState.name,
-        category: supplierFromState.category as any,
+        category: supplierFromState.category,
         rating: 0,
         responseTime: '',
         priceRange: '',
@@ -67,19 +65,186 @@ export default function SupplierDetailPage() {
     
   const [messages, setMessages] = useState<Message[]>([]);
   const [loadingMessages, setLoadingMessages] = useState(false);
-  const [fetchError, setFetchError] = useState<string | null>(null);
+  const [,setFetchError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const mockConversation = mockConversations.find((c) => c.supplierId === supplierId);
   const offer = mockOffers.find((o) => o.supplierId === supplierId);
   
-  // Auto-scroll to bottom when messages change
   useEffect(() => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [messages]);
 
-  // Fetch messages from backend if negotiation_id is available
+  // --- Helpers for conversation rendering ---
+  const stripReasoningTags = (text: string) => {
+    if (!text) return '';
+    // Remove <reasoning>...</reasoning> blocks
+    return text.replace(/<reasoning>[\s\S]*?<\/reasoning>/gi, '').trim();
+  };
+
+  // Replace placeholder tokens like [Your Name], [Your Full Name] with defaults
+  const replacePlaceholders = (text: string) => {
+    if (!text) return '';
+    const defaults = {
+      'Your Name': 'Alex Morgan',
+      'Your Full Name': 'Alex Morgan',
+      'Your Title': 'Procurement Specialist',
+      'Your Company Name': 'Acme Corp',
+      'Phone Number': '+1 (555) 012-3456',
+      'Email Address': 'alex.morgan@acmecorp.com',
+      'Company Website': 'https://www.acmecorp.com',
+    } as Record<string, string>;
+
+    // Replace bracketed placeholders case-insensitively
+    let out = text.replace(/\[(Your Full Name|Your Name|Your Title|Your Company Name|Phone Number|Email Address|Company Website)/gi, (match, p1) => {
+      // Normalize the key capitalization like in defaults
+      const key = (p1 as string)
+        .toLowerCase()
+        .replace(/\b\w/g, (c) => c.toUpperCase());
+      return defaults[key] || match;
+    });
+
+    // Also handle the common hyphen/pipe joined line
+    out = out.replace(/\[Your Name/gi, defaults['Your Name']);
+    return out;
+  };
+
+  // Minimal Markdown renderer that supports **bold**, *italic*, `code`, links, and preserves line breaks
+  const RichText = ({ text, className }: { text: string; className?: string }) => {
+    // Escape HTML to avoid injection
+    const escapeHtml = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const renderInline = (s: string, idxBase = 0): (string | JSX.Element)[] => {
+      const parts: (string | JSX.Element)[] = [];
+      const rest = s;
+      let idx = 0;
+      // Process code spans first
+      const processCode = (input: string) => {
+        const segs: (string | JSX.Element)[] = [];
+        let m: RegExpExecArray | null;
+        const codeRe = /`([^`]+)`/g;
+        let lastIndex = 0;
+        while ((m = codeRe.exec(input))) {
+          if (m.index > lastIndex) segs.push(escapeHtml(input.slice(lastIndex, m.index)));
+          segs.push(
+            <code key={`code-${idxBase}-${idx++}`} className="rounded bg-muted px-1 py-0.5 text-xs">
+              {escapeHtml(m[1])}
+            </code>
+          );
+          lastIndex = m.index + m[0].length;
+        }
+        if (lastIndex < input.length) segs.push(escapeHtml(input.slice(lastIndex)));
+        return segs;
+      };
+
+      // After code spans, handle bold, italic, and links by mapping strings
+      const applyStyles = (nodes: (string | JSX.Element)[]) =>
+        nodes.flatMap((node) => {
+          if (typeof node !== 'string') return [node];
+          // Links
+          const linkified: (string | JSX.Element)[] = [];
+          const linkRe = /(https?:\/\/[^\s)]+)|\b([\w.-]+@[\w.-]+\.[A-Za-z]{2,})\b/g;
+          let last = 0;
+          let match: RegExpExecArray | null;
+          while ((match = linkRe.exec(node))) {
+            if (match.index > last) linkified.push(node.slice(last, match.index));
+            const url = match[1] || `mailto:${match[2]}`;
+            const label = match[0];
+            linkified.push(
+              <a key={`a-${idxBase}-${idx++}`} href={url} target="_blank" rel="noreferrer" className="underline underline-offset-2">
+                {label}
+              </a>
+            );
+            last = match.index + match[0].length;
+          }
+          if (last < node.length) linkified.push(node.slice(last));
+
+          // Bold and italic on each string piece
+          return linkified.flatMap((piece) => {
+            if (typeof piece !== 'string') return [piece];
+            // Bold **text**
+            const boldRe = /\*\*([^*]+)\*\*/g;
+            const acc: (string | JSX.Element)[] = [];
+            let lastB = 0;
+            let mb: RegExpExecArray | null;
+            while ((mb = boldRe.exec(piece))) {
+              if (mb.index > lastB) acc.push(piece.slice(lastB, mb.index));
+              acc.push(
+                <strong key={`b-${idxBase}-${idx++}`} className="font-semibold">
+                  {mb[1]}
+                </strong>
+              );
+              lastB = mb.index + mb[0].length;
+            }
+            if (lastB < piece.length) acc.push(piece.slice(lastB));
+
+            // Italic *text*
+              return acc.flatMap((seg) => {
+                if (typeof seg !== 'string') return [seg];
+                const itRe = /\*([^*]+)\*/g;
+                const res: (string | JSX.Element)[] = [];
+                let lastI = 0;
+                let mi: RegExpExecArray | null;
+                while ((mi = itRe.exec(seg))) {
+                    if (mi.index > lastI) res.push(seg.slice(lastI, mi.index));
+                    res.push(
+                        <em key={`i-${idxBase}-${idx++}`} className="italic">
+                            {mi[1]}
+                        </em>
+                    );
+                    lastI = mi.index + mi[0].length;
+                }
+                if (lastI < seg.length) res.push(seg.slice(lastI));
+                return res;
+            });
+          });
+        });
+
+      rest.split(/(\r?\n)/).forEach((chunk, ) => {
+        if (chunk === '\n' || chunk === '\r\n') {
+          parts.push(<br key={`br-${idxBase}-${idx++}`} />);
+        } else if (chunk.length) {
+          const codeFirst = processCode(chunk);
+          parts.push(...applyStyles(codeFirst));
+        }
+      });
+      return parts;
+    };
+
+    return <div className={cn('whitespace-pre-wrap leading-relaxed text-sm break-words', className)}>{renderInline(text)}</div>;
+  };
+
+  type NormalizedMessage = {
+    id: string;
+    role: 'negotiator' | 'supplier' | string;
+    text: string;
+    timestamp: string | null;
+  };
+
+  const normalizeMessages = (items: Message[]): NormalizedMessage[] => {
+    return (items || []).map((m, idx) => {
+      const id = String(m.message_id || m.id || `${idx}`);
+      const role = m.role || 'supplier';
+      const rawText = (m.message_text ?? m.content ?? (m as { text?: unknown }).text ?? '') as string | undefined;
+      const sanitized = stripReasoningTags(String(rawText));
+      const text = replacePlaceholders(sanitized);
+      const ts = m.message_timestamp || m.timestamp || m.created_at || null;
+      return { id, role, text, timestamp: ts };
+    });
+  };
+
+  const formatTimestamp = (iso?: string | null) => {
+    if (!iso) return '';
+    try {
+      const d = new Date(iso);
+      return new Intl.DateTimeFormat(undefined, {
+        year: 'numeric', month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit'
+      }).format(d);
+    } catch {
+      return String(iso);
+    }
+  };
+
   useEffect(() => {
     const fetchMessages = async () => {
       console.log('Fetching messages with:', { negotiationId, supplierId, state });
@@ -103,8 +268,8 @@ export default function SupplierDetailPage() {
         
         // Sort messages by timestamp
         const sortedMessages = [...fetchedMessages].sort((a, b) => {
-          const timeA = new Date(a.timestamp || a.created_at || 0).getTime();
-          const timeB = new Date(b.timestamp || b.created_at || 0).getTime();
+          const timeA = new Date(a.message_timestamp || a.timestamp || a.created_at || 0).getTime();
+          const timeB = new Date(b.message_timestamp || b.timestamp || b.created_at || 0).getTime();
           return timeA - timeB;
         });
         
@@ -135,6 +300,8 @@ export default function SupplierDetailPage() {
 
     fetchMessages();
   }, [negotiationId, supplierId, state]);
+
+  // Removed debug/fallback JSON fetching to keep the UI clean and focused on conversation
 
   const getStatusLabel = (status: string) => {
     switch (status) {
@@ -208,8 +375,8 @@ export default function SupplierDetailPage() {
             )}
           </Card>
 
-          {/* Conversation Messages */}
-          <Card className="p-6 border">
+          {/* Conversation Messages - Messenger-like, no borders, page scrolls */}
+          <div className="p-0">
             <div className="mb-5 flex items-center justify-between">
               <h3 className="text-lg font-semibold">Conversation</h3>
               {negotiationId && (
@@ -218,152 +385,63 @@ export default function SupplierDetailPage() {
                 </Badge>
               )}
             </div>
-            
+
             {loadingMessages ? (
               <div className="text-center py-8">
                 <p className="text-sm text-muted-foreground">Loading messages...</p>
               </div>
-            ) : messages.length > 0 ? (
-              <ScrollArea className="h-[500px] pr-4">
-                <div className="space-y-3">
-                  {messages.map((message, index) => {
-                    // Determine if message is from negotiator/agent (our side) or supplier
-                    // Roles: 'agent', 'negotiator', 'user' = our side (left)
-                    // Roles: 'supplier', or no role but from supplier = supplier side (right)
-                    const role = (message.role || '').toLowerCase();
-                    const isNegotiator = role === 'agent' || role === 'negotiator' || role === 'user' || !role;
-                    const isSupplier = role === 'supplier' || role === 'supplier_response';
-                    
-                    // Default to negotiator if unclear, but prefer supplier if explicitly marked
-                    const isFromNegotiator = isNegotiator && !isSupplier;
-                    
-                    // Backend might return 'message' field instead of 'content'
-                    const messageContent = message.content || message.message || message.text || message.body || '';
-                    const timestamp = message.timestamp || message.created_at || message.sent_at || message.date || '';
-                    
-                    // Format timestamp
-                    const formatTime = (ts: string) => {
-                      if (!ts) return '';
-                      const date = new Date(ts);
-                      const now = new Date();
-                      const isToday = date.toDateString() === now.toDateString();
-                      
-                      if (isToday) {
-                        return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
-                      }
-                      return date.toLocaleString('en-US', { 
-                        month: 'short', 
-                        day: 'numeric',
-                        hour: '2-digit', 
-                        minute: '2-digit' 
-                      });
-                    };
-                    
+            ) : (
+              <div className="pr-1">
+                {/* Pretty chat layout with subtle animations */}
+                <div className="space-y-4">
+                  {normalizeMessages(messages).map((m) => {
+                    const isBuyer = m.role?.toLowerCase() === 'negotiator';
                     return (
                       <div
-                        key={message.message_id || message.id || index}
+                        key={m.id}
                         className={cn(
-                          "flex gap-3 items-start",
-                          isFromNegotiator ? "justify-start" : "justify-end"
+                          'flex items-start gap-3 animate-in fade-in slide-in-from-bottom-2 duration-300',
+                          isBuyer ? 'justify-end' : 'justify-start'
                         )}
                       >
-                        {isFromNegotiator && (
-                          <div className="w-8 h-8 rounded-full bg-foreground flex items-center justify-center flex-shrink-0 mt-1">
-                            <Bot className="h-4 w-4 text-background" />
+                        {!isBuyer && (
+                          <div className="h-8 w-8 rounded-full bg-muted border flex items-center justify-center text-muted-foreground">
+                            <Bot className="h-4 w-4" />
                           </div>
                         )}
-                        <div className={cn(
-                          "max-w-[75%] rounded-2xl px-4 py-3 shadow-sm",
-                          isFromNegotiator 
-                            ? "bg-muted/60 rounded-tl-sm" 
-                            : "bg-foreground text-background rounded-tr-sm"
-                        )}>
-                          <div className="flex items-center gap-2 mb-1.5">
-                            <span className={cn(
-                              "text-xs font-semibold uppercase tracking-wide",
-                              isFromNegotiator ? "text-muted-foreground" : "text-background/80"
-                            )}>
-                              {isFromNegotiator ? 'Negotiator' : supplier.name}
-                            </span>
-                            {timestamp && (
-                              <span className={cn(
-                                "text-xs",
-                                isFromNegotiator ? "text-muted-foreground/70" : "text-background/70"
-                              )}>
-                                {formatTime(timestamp)}
-                              </span>
-                            )}
-                          </div>
-                          <p className={cn(
-                            "text-sm leading-relaxed whitespace-pre-wrap break-words",
-                            isFromNegotiator ? "text-foreground" : "text-background"
-                          )}>
-                            {messageContent}
-                          </p>
+                        <div
+                          className={cn(
+                            'max-w-[80%] rounded-2xl p-3 shadow-sm transition-all',
+                            isBuyer
+                              ? 'bg-muted/80 text-foreground rounded-br-sm'
+                              : 'bg-muted rounded-bl-sm'
+                          )}
+                        >
+                          <RichText text={m.text} />
+                          {m.timestamp && (
+                            <div className={cn('mt-2 flex items-center gap-1 text-[10px]', isBuyer ? 'text-primary-foreground/70' : 'text-muted-foreground')}>
+                              <Clock className="h-3 w-3" />
+                              <span>{formatTimestamp(m.timestamp)}</span>
+                            </div>
+                          )}
                         </div>
-                        {!isFromNegotiator && (
-                          <div className="w-8 h-8 rounded-full bg-muted border-2 border-foreground/20 flex items-center justify-center flex-shrink-0 mt-1">
-                            <User className="h-4 w-4 text-foreground" />
+                        {isBuyer && (
+                          <div className="h-8 w-8 rounded-full bg-foreground text-background flex items-center justify-center">
+                            <User className="h-4 w-4" />
                           </div>
                         )}
                       </div>
                     );
                   })}
-                  <div ref={messagesEndRef} />
+                  {/* Empty state */}
+                  {messages.length === 0 && (
+                    <div className="text-sm text-muted-foreground text-center py-12">No messages yet.</div>
+                  )}
                 </div>
-              </ScrollArea>
-            ) : mockConversation ? (
-              <div className="space-y-4">
-                <div className="bg-muted/50 p-4 border-l-2 border-muted rounded-md">
-                  <p className="mb-2 text-xs font-medium text-muted-foreground uppercase tracking-wide">AI Agent</p>
-                  <p className="text-sm">
-                    Requested quote for bulk order with volume discount. Asked about delivery timeline and payment terms.
-                  </p>
-                </div>
-                <div className="bg-muted/30 p-4 border-l-2 border-foreground rounded-md">
-                  <p className="mb-2 text-xs font-medium text-foreground uppercase tracking-wide">Supplier Response</p>
-                  <p className="text-sm">{mockConversation.lastMessage}</p>
-                </div>
-              </div>
-            ) : fetchError === 'CORS_ERROR' ? (
-              <div className="text-center py-8">
-                <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4 max-w-md mx-auto">
-                  <p className="text-sm font-semibold text-destructive mb-2">CORS Configuration Error</p>
-                  <p className="text-xs text-muted-foreground mb-3">
-                    The backend is not allowing requests from this origin. Please ensure the backend CORS settings include:
-                  </p>
-                  <code className="text-xs bg-muted px-2 py-1 rounded block text-left">
-                    http://localhost:8081
-                  </code>
-                  <p className="text-xs text-muted-foreground mt-3">
-                    Backend needs to be restarted after CORS configuration changes.
-                  </p>
-                </div>
-              </div>
-            ) : fetchError === 'NETWORK_ERROR' ? (
-              <div className="text-center py-8">
-                <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4 max-w-md mx-auto">
-                  <p className="text-sm font-semibold text-destructive mb-2">Network Error</p>
-                  <p className="text-xs text-muted-foreground">
-                    Could not connect to the backend. Please check if the backend is running.
-                  </p>
-                </div>
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <p className="text-sm text-muted-foreground">No conversation messages available</p>
-                {!negotiationId ? (
-                  <p className="text-xs text-muted-foreground mt-2">
-                    Open this supplier from an active negotiation to see messages
-                  </p>
-                ) : (
-                  <p className="text-xs text-muted-foreground mt-2">
-                    No messages found for this negotiation and supplier
-                  </p>
-                )}
+                <div ref={messagesEndRef} />
               </div>
             )}
-          </Card>
+          </div>
 
           {/* Offer Details */}
           {offer && (

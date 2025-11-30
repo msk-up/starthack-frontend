@@ -27,7 +27,7 @@ export interface Product {
 export interface Supplier {
   supplier_id: string;
   supplier_name: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface ProductRow {
@@ -35,7 +35,7 @@ export interface ProductRow {
   product_name: string;
   supplier_id: string;
   supplier_name?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 export interface SearchResponse {
   products: Product[];
@@ -49,12 +49,8 @@ export async function searchProducts(query: string): Promise<Product[]> {
     const url = `${API_BASE_URL}/search?product=${encodeURIComponent(query)}`;
     console.log('Searching products:', url);
     
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
+    // Keep it a simple GET without custom headers to avoid CORS preflight
+    const response = await fetch(url, { method: 'GET' });
     
     if (!response.ok) {
       const errorText = await response.text();
@@ -130,9 +126,13 @@ export interface Message {
   sup_id?: string;
   content?: string;
   role?: string;
+  // Some backends use these alternative fields
+  message_text?: string;
+  message_timestamp?: string;
+  text?: string;
   timestamp?: string;
   created_at?: string;
-  [key: string]: any;
+  [key: string]: unknown;
 }
 
 export interface ConversationResponse {
@@ -148,12 +148,8 @@ export async function getConversation(negotiationId: string, supplierId: string)
     const url = `${API_BASE_URL}/conversation/${encodeURIComponent(negotiationId)}/${encodeURIComponent(supplierId)}`;
     console.log(`[getConversation] URL: ${url}`);
     
-    const response = await fetch(url, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
+    // Keep request simple to avoid CORS preflight
+    const response = await fetch(url, { method: 'GET' });
 
     console.log(`[getConversation] Response status: ${response.status}`);
 
@@ -184,9 +180,32 @@ export async function getConversation(negotiationId: string, supplierId: string)
       return [];
     }
 
-    const data: ConversationResponse = await response.json();
-    console.log(`[getConversation] Received data:`, data);
-    const messages = data.message || [];
+    const raw = (await response.json()) as unknown;
+    console.log(`[getConversation] Received data:`, raw);
+
+    // Normalise multiple possible shapes into a Message[]: { message: [...] } or [...] or { messages: [...] }
+    let messages: Message[] = [];
+
+    if (Array.isArray(raw)) {
+      messages = raw as Message[];
+    } else if (raw && typeof raw === 'object') {
+      const container = raw as { message?: unknown; messages?: unknown };
+      if (Array.isArray(container.message)) {
+        messages = container.message as Message[];
+      } else if (Array.isArray(container.messages)) {
+        messages = container.messages as Message[];
+      } else {
+        console.warn('[getConversation] Unexpected object shape; returning empty array');
+      }
+    } else {
+      console.warn('[getConversation] Unexpected response type; returning empty array');
+    }
+
+    // Debug: log keys of first message for field-name verification
+    if (messages.length > 0) {
+      const keys = Object.keys(messages[0] || {});
+      console.log('[getConversation] First message keys:', keys);
+    }
     console.log(`[getConversation] Returning ${messages.length} messages`);
     return messages;
   } catch (error) {
@@ -202,6 +221,113 @@ export async function getConversation(negotiationId: string, supplierId: string)
     }
     
     // For any other error, return empty array
+    return [];
+  }
+}
+
+
+// ---- Additional helper endpoints for fallback JSON display ----
+
+export interface NegotiationStatusAgent {
+  supplier_id: string;
+  message_count: number;
+  [key: string]: unknown;
+}
+
+export interface NegotiationStatusResponse {
+  negotiation_id: string;
+  agents: NegotiationStatusAgent[];
+   // Newer backend includes a global completion flag
+   all_completed?: boolean;
+  [key: string]: unknown;
+}
+
+/**
+ * Get negotiation status and message counts per supplier
+ */
+export async function getNegotiationStatus(negotiationId: string): Promise<NegotiationStatusResponse | null> {
+  try {
+    const url = `${API_BASE_URL}/negotiation_status/${encodeURIComponent(negotiationId)}`;
+    const res = await fetch(url, { method: 'GET' });
+    if (!res.ok) {
+      return null;
+    }
+    const data = await res.json();
+    return data as NegotiationStatusResponse;
+  } catch (e) {
+    console.error('Error fetching negotiation status:', e);
+    return null;
+  }
+}
+
+// ---- Orchestrator activity timeline ----
+
+export interface OrchestratorActivityItem {
+  activity_id: string;
+  supplier_id: string | null;
+  supplier_name?: string | null;
+  action?: string | null;
+  summary?: string | null;
+  details?: string | null;
+  completed?: boolean | null;
+  timestamp: string | null;
+}
+
+export interface OrchestratorActivityResponse {
+  negotiation_id: string;
+  count: number;
+  activities: OrchestratorActivityItem[];
+}
+
+/**
+ * Fetch orchestrator activity feed for a negotiation. Optional supplier filter.
+ */
+export async function getOrchestratorActivity(
+  negotiationId: string,
+  supplierId?: string
+): Promise<OrchestratorActivityResponse | null> {
+  try {
+    const base = `${API_BASE_URL}/orchestrator_activity/${encodeURIComponent(negotiationId)}`;
+    const url = supplierId ? `${base}?supplier_id=${encodeURIComponent(supplierId)}` : base;
+    const res = await fetch(url, { method: 'GET' });
+    if (!res.ok) return null;
+    const data = (await res.json()) as OrchestratorActivityResponse;
+    // Normalize a bit just in case
+    data.activities = Array.isArray(data.activities) ? data.activities : [];
+    return data;
+  } catch (e) {
+    console.error('Error fetching orchestrator activity:', e);
+    return null;
+  }
+}
+
+export interface NegotiationItem {
+  negotiation_id: string;
+  product: string;
+  strategy: string;
+  status: string;
+  [key: string]: unknown;
+}
+
+export interface ListNegotiationsResponse {
+  negotiations: NegotiationItem[];
+}
+
+/**
+ * List all negotiations
+ */
+export async function listNegotiations(): Promise<NegotiationItem[]> {
+  try {
+    const url = `${API_BASE_URL}/get_negotations`;
+    const res = await fetch(url, { method: 'GET' });
+    if (!res.ok) {
+      return [];
+    }
+    const data: ListNegotiationsResponse = await res.json();
+    const list = Array.isArray(data.negotiations) ? data.negotiations : [];
+    return list;
+  } catch (e) {
+    console.error('Error listing negotiations:', e);
     return [];
   }
 }
@@ -235,6 +361,51 @@ export interface BackendNegotiation {
 
 export interface BackendNegotiationsResponse {
   negotiations: BackendNegotiation[];
+}
+
+// ---- Negotiation tactics / prompt helper ----
+export interface NegotiationTacticsResponse {
+  // Preferred shape
+  prompt?: string;
+  tactics?: string[];
+  [key: string]: unknown;
+}
+
+/**
+ * Fetch negotiation tactics/prompt from backend. We try a couple of likely endpoints
+ * and return a tolerant shape with a `prompt` string and optional `tactics` list.
+ */
+export async function getNegotiationTactics(): Promise<NegotiationTacticsResponse> {
+  const candidates = [
+    `${API_BASE_URL}/negotiation_tactics`,
+    `${API_BASE_URL}/negotiation%20tactics`,
+    `${API_BASE_URL}/tactics`,
+  ];
+  for (const url of candidates) {
+    try {
+      const res = await fetch(url, { method: 'GET' });
+      if (!res.ok) continue;
+      const data = (await res.json()) as unknown;
+      // Normalize to { prompt, tactics }
+      if (typeof data === 'string') {
+        return { prompt: data };
+      }
+      if (Array.isArray(data)) {
+        // If array of strings, assume tactics list
+        if (data.every((v) => typeof v === 'string')) return { tactics: data };
+      }
+      const obj = (data && typeof data === 'object') ? data as Record<string, unknown> : {};
+      const prompt = (obj.prompt || obj.default_prompt || obj.example || obj.sample) as string | undefined || '';
+      const tactics = (obj.tactics || obj.modes || obj.options) as string[] | undefined;
+      if (prompt || tactics) return { prompt, tactics } as NegotiationTacticsResponse;
+      // Fallback: return raw object so caller can inspect
+      return obj as NegotiationTacticsResponse;
+    } catch (e) {
+      // try next candidate
+      continue;
+    }
+  }
+  return { prompt: '' };
 }
 
 /**
@@ -332,11 +503,13 @@ export async function getNegotiations(): Promise<Negotiation[]> {
           });
           
           if (statusResponse.ok) {
-            const statusData = await statusResponse.json();
+            const statusData = (await statusResponse.json()) as {
+              agents?: Array<{ supplier_id?: string | number | null; sup_id?: string | number | null }>;
+            };
             // Backend returns sup_id, but we need to handle both supplier_id and sup_id
-            const supplierIds = (statusData.agents || []).map((a: any) => {
-              return String(a.supplier_id || a.sup_id || '');
-            }).filter(id => id && id !== 'undefined' && id !== 'null');
+            const supplierIds = (statusData.agents || [])
+              .map((a) => String(a.supplier_id ?? a.sup_id ?? ''))
+              .filter((id) => id && id !== 'undefined' && id !== 'null');
             return { negotiationId: ng.negotiation_id, supplierIds };
           }
         } catch (err) {
