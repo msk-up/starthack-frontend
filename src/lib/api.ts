@@ -260,43 +260,85 @@ export async function getNegotiationStatus(negotiationId: string): Promise<Negot
   }
 }
 
-// ---- Orchestrator activity timeline ----
+// ---- Negotiation overview for orchestrator summary ----
 
-export interface OrchestratorActivityItem {
-  activity_id: string;
-  supplier_id: string | null;
-  supplier_name?: string | null;
-  action?: string | null;
-  summary?: string | null;
-  details?: string | null;
-  completed?: boolean | null;
-  timestamp: string | null;
+export interface NegotiationOverviewSupplierProgress {
+  supplier_id: string;
+  supplier_name: string;
+  status?: string;
+  progress?: number;
+  [key: string]: unknown;
 }
 
-export interface OrchestratorActivityResponse {
+export interface NegotiationOverviewResponse {
   negotiation_id: string;
-  count: number;
-  activities: OrchestratorActivityItem[];
+  product: string;
+  strategy: string;
+  generated_at: string;
+  overview: string;
+  suppliers: NegotiationOverviewSupplierProgress[];
 }
 
 /**
- * Fetch orchestrator activity feed for a negotiation. Optional supplier filter.
+ * Fetch high-level negotiation overview summary for a negotiation.
+ * This is used to show the orchestrator's summarized activity.
  */
-export async function getOrchestratorActivity(
-  negotiationId: string,
-  supplierId?: string
-): Promise<OrchestratorActivityResponse | null> {
+export async function getNegotiationOverview(
+  negotiationId: string
+): Promise<NegotiationOverviewResponse | null> {
   try {
-    const base = `${API_BASE_URL}/orchestrator_activity/${encodeURIComponent(negotiationId)}`;
-    const url = supplierId ? `${base}?supplier_id=${encodeURIComponent(supplierId)}` : base;
+    const url = `${API_BASE_URL}/negotiation_overview/${encodeURIComponent(negotiationId)}`;
     const res = await fetch(url, { method: 'GET' });
     if (!res.ok) return null;
-    const data = (await res.json()) as OrchestratorActivityResponse;
-    // Normalize a bit just in case
-    data.activities = Array.isArray(data.activities) ? data.activities : [];
+    const data = (await res.json()) as NegotiationOverviewResponse;
     return data;
   } catch (e) {
-    console.error('Error fetching orchestrator activity:', e);
+    console.error('Error fetching negotiation overview:', e);
+    return null;
+  }
+}
+
+// ---- Per-supplier negotiation summary ----
+
+export interface NegotiationSupplierSummaryItem {
+  summary_id: string;
+  supplier_id: string | null;
+  supplier_name?: string | null;
+  agent_id?: string | null;
+  summary: string;
+  created_at?: string | null;
+  [key: string]: unknown;
+}
+
+export interface NegotiationSupplierSummaryResponse {
+  negotiation_id: string;
+  count: number;
+  summaries: NegotiationSupplierSummaryItem[];
+}
+
+/**
+ * Fetch negotiation summary for a specific supplier within a negotiation.
+ * Backend endpoint: GET /negotiation_summary/{negotiation_id}/{supplier_id}
+ */
+export async function getNegotiationSummary(
+  negotiationId: string,
+  supplierId: string
+): Promise<NegotiationSupplierSummaryResponse | null> {
+  try {
+    const url = `${API_BASE_URL}/negotiation_summary/${encodeURIComponent(
+      negotiationId
+    )}/${encodeURIComponent(supplierId)}`;
+    const res = await fetch(url, { method: 'GET' });
+    if (!res.ok) {
+      return null;
+    }
+    const data = (await res.json()) as NegotiationSupplierSummaryResponse;
+    if (!Array.isArray(data.summaries)) {
+      data.summaries = [];
+    }
+    return data;
+  } catch (e) {
+    console.error('Error fetching negotiation summary:', e);
     return null;
   }
 }

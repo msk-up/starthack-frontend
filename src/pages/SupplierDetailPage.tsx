@@ -8,7 +8,7 @@ import {Progress} from '@/components/ui/progress';
 // We avoid inner scroll areas for the conversation so the whole page scrolls
 import {mockConversations, mockOffers, mockSuppliers} from '@/lib/mockData';
 import {ProductCategory, Supplier} from '@/types/procurement';
-import {getConversation, type Message} from '@/lib/api';
+import {getConversation, getNegotiationSummary, type Message, type NegotiationSupplierSummaryItem} from '@/lib/api';
 import {cn} from '@/lib/utils';
 
 interface SupplierWithProducts {
@@ -69,12 +69,37 @@ export default function SupplierDetailPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const mockConversation = mockConversations.find((c) => c.supplierId === supplierId);
   const offer = mockOffers.find((o) => o.supplierId === supplierId);
+  const [summaryItems, setSummaryItems] = useState<NegotiationSupplierSummaryItem[] | null>(null);
+  const [loadingSummary, setLoadingSummary] = useState(false);
   
   useEffect(() => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [messages]);
+
+  // Fetch per-supplier negotiation summary when we know negotiationId and supplierId
+  useEffect(() => {
+    const fetchSummary = async () => {
+      if (!negotiationId || !supplierId) return;
+      try {
+        setLoadingSummary(true);
+        const res = await getNegotiationSummary(String(negotiationId), String(supplierId));
+        if (res && Array.isArray(res.summaries)) {
+          setSummaryItems(res.summaries);
+        } else {
+          setSummaryItems([]);
+        }
+      } catch (e) {
+        console.warn('Failed to fetch negotiation summary for supplier detail view', e);
+        setSummaryItems([]);
+      } finally {
+        setLoadingSummary(false);
+      }
+    };
+
+    void fetchSummary();
+  }, [negotiationId, supplierId]);
 
   // --- Helpers for conversation rendering ---
   const stripReasoningTags = (text: string) => {
@@ -372,6 +397,29 @@ export default function SupplierDetailPage() {
                   Last update: {mockConversation.timestamp.toLocaleTimeString()}
                 </p>
               </>
+            )}
+
+            {/* Negotiation summary for this supplier (from backend) */}
+            {negotiationId && (
+              <div className="mt-6 rounded-md border bg-muted/40 px-4 py-3">
+                <div className="mb-1 flex items-center justify-between">
+                  <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Negotiation Summary
+                  </span>
+                  {loadingSummary && (
+                    <span className="text-[11px] text-muted-foreground">Loading…</span>
+                  )}
+                </div>
+                {summaryItems && summaryItems.length > 0 ? (
+                  <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">
+                    {summaryItems[0].summary}
+                  </p>
+                ) : !loadingSummary ? (
+                  <p className="text-xs text-muted-foreground">
+                    No summary available yet for this supplier.
+                  </p>
+                ) : null}
+              </div>
             )}
           </Card>
 

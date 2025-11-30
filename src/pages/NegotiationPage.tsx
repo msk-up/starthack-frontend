@@ -110,7 +110,15 @@ export default function NegotiationPage() {
       try {
         setLoadingNegotiations(true);
         const negotiations = await getNegotiations();
-        setPreviousNegotiations(negotiations || []);
+
+        // Sort negotiations so newest appears first in the sidebar
+        const sortedNegotiations = (negotiations || []).slice().sort((a, b) => {
+          const timeA = new Date(a.created_at || 0).getTime();
+          const timeB = new Date(b.created_at || 0).getTime();
+          return timeB - timeA; // descending: newest on top
+        });
+
+        setPreviousNegotiations(negotiations.reverse());
       } catch (error) {
         console.error('Error fetching negotiations:', error);
         setPreviousNegotiations([]);
@@ -178,7 +186,15 @@ export default function NegotiationPage() {
       // Refresh negotiations list
       try {
         const negotiations = await getNegotiations();
-        setPreviousNegotiations(negotiations);
+
+        // Keep sidebar sorted with newest negotiations on top after creation
+        const sortedNegotiations = (negotiations || []).slice().sort((a, b) => {
+          const timeA = new Date(a.created_at || 0).getTime();
+          const timeB = new Date(b.created_at || 0).getTime();
+          return timeB - timeA; // descending: newest on top
+        });
+
+        setPreviousNegotiations(sortedNegotiations);
       } catch (error) {
         console.error('Error refreshing negotiations:', error);
       }
@@ -402,6 +418,8 @@ export default function NegotiationPage() {
                   initialHasPromptBeenSent={!!negotiationPromptFromState}
                   previewJson={previewJson}
                   negotiationStatus={negotiationStatusJson}
+                  compactOrchestratorUI
+                  negotiationId={currentNegotiationId}
                   key={resetKey}
                 />
               </div>

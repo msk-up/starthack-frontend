@@ -6,6 +6,12 @@ import {Textarea} from '@/components/ui/textarea';
 import {Tabs, TabsList, TabsTrigger, TabsContent} from '@/components/ui/tabs';
 import {cn} from '@/lib/utils';
 import TinderToneSelector from './TinderToneSelector';
+import {
+    getNegotiationOverview,
+    getNegotiationSummary,
+    type NegotiationOverviewResponse,
+    type NegotiationSupplierSummaryItem,
+} from '@/lib/api';
 
 // Types for negotiation status payload used by this component
 type NegotiationStatusAgentUI = {
@@ -43,6 +49,9 @@ interface OrchestrationVisualProps {
     previewJson?: Record<string, unknown> | null;
     // Live negotiation status payload from GET /negotiation_status/{id}
     negotiationStatus?: NegotiationStatusPayloadUI | null;
+    compactOrchestratorUI?: boolean;
+    // Negotiation id used to fetch orchestrator activity JSON
+    negotiationId?: string | number | null;
 }
 
 export default function OrchestrationVisual({
@@ -54,7 +63,9 @@ export default function OrchestrationVisual({
                                                 initialTones,
                                                 initialHasPromptBeenSent = false,
                                                 previewJson,
-                                                negotiationStatus
+                                                negotiationStatus,
+                                                compactOrchestratorUI = false,
+                                                negotiationId,
                                             }: OrchestrationVisualProps) {
     const [prompt, setPrompt] = useState(initialPrompt || '');
     const [animatingIndex, setAnimatingIndex] = useState<number | null>(null);
@@ -69,6 +80,10 @@ export default function OrchestrationVisual({
     const [toneSelectorKey, setToneSelectorKey] = useState(0);
     const animationStarted = useRef(false);
     const hasInitiatedNegotiation = useRef(initialHasPromptBeenSent);
+    const [overview, setOverview] = useState<NegotiationOverviewResponse | null>(null);
+    const [overviewLoading, setOverviewLoading] = useState(false);
+    const [supplierSummaries, setSupplierSummaries] = useState<Record<string, NegotiationSupplierSummaryItem[]>>({});
+    const [supplierSummariesLoading, setSupplierSummariesLoading] = useState<Record<string, boolean>>({});
 
     useEffect(() => {
         if (initialPrompt) {
@@ -113,6 +128,85 @@ export default function OrchestrationVisual({
             animationStarted.current = false;
         }
     }, [isProcessing, suppliers.length, showToneSelector]);
+
+    // Orchestrator overview polling: high-level summary from backend
+    useEffect(() => {
+        let intervalId: number | undefined;
+
+        const fetchOverview = async () => {
+            if (!negotiationId) return;
+            try {
+                if (!overview) {
+                    setOverviewLoading(true);
+                }
+                const res = await getNegotiationOverview(String(negotiationId));
+                if (res) {
+                    setOverview(res);
+                }
+            } catch (e) {
+                console.warn('Failed to fetch negotiation overview', e);
+            } finally {
+                setOverviewLoading(false);
+            }
+        };
+
+        if (negotiationId) {
+            void fetchOverview();
+            intervalId = window.setInterval(fetchOverview, 5000);
+        }
+
+        return () => {
+            if (intervalId) window.clearInterval(intervalId);
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [negotiationId]);
+
+    // Fetch per-supplier negotiation summary when an agent is completed
+    useEffect(() => {
+        if (!negotiationId || !negotiationStatus) return;
+
+        const agents: NegotiationStatusAgentUI[] =
+            negotiationStatus.agents || negotiationStatus.data?.agents || [];
+
+        const completedSupplierIds = agents
+            .filter((a) => a.completed && a.supplier_id != null)
+            .map((a) => String(a.supplier_id));
+
+        completedSupplierIds.forEach((supplierId) => {
+            // Avoid refetching if we already have a summary for this supplier
+            if (supplierSummaries[supplierId]) return;
+
+            (async () => {
+                try {
+                    setSupplierSummariesLoading((prev) => ({
+                        ...prev,
+                        [supplierId]: true,
+                    }));
+
+                    const res = await getNegotiationSummary(String(negotiationId), supplierId);
+                    if (res && Array.isArray(res.summaries)) {
+                        setSupplierSummaries((prev) => ({
+                            ...prev,
+                            [supplierId]: res.summaries,
+                        }));
+                    } else {
+                        setSupplierSummaries((prev) => ({
+                            ...prev,
+                            [supplierId]: [],
+                        }));
+                    }
+                } catch (error) {
+                    console.warn('Failed to fetch negotiation summary', error);
+                } finally {
+                    setSupplierSummariesLoading((prev) => {
+                        const next = {...prev};
+                        delete next[supplierId];
+                        return next;
+                    });
+                }
+            })();
+        });
+    }, [negotiationId, negotiationStatus, supplierSummaries]);
 
     const handleSubmit = () => {
         if (prompt.trim() && !isProcessing && !hasInitiatedNegotiation.current && suppliers.length > 0) {
@@ -199,9 +293,9 @@ export default function OrchestrationVisual({
                 !hasPromptBeenSent && "justify-center"
             )}>
                 {/* Orchestration Agent with Prompt - Left Side */}
-                <div className={cn(
-                    "flex-shrink-0 transition-all duration-500",
-                    !hasPromptBeenSent ? "w-full max-w-2xl" : "w-[420px]"
+            <div className={cn(
+                "flex-shrink-0 transition-all duration-500",
+                    compactOrchestratorUI ? "w-[420px]" : (!hasPromptBeenSent ? "w-full max-w-2xl" : "w-[420px]")
                 )}>
                     <Card className={cn(
                         "border bg-card transition-all duration-300",
@@ -221,7 +315,38 @@ export default function OrchestrationVisual({
                                 </div>
                             </div>
 
-                            {hasPromptBeenSent ? (
+                            {compactOrchestratorUI ? (
+                                <div className="space-y-3">
+                                    <label className="text-sm font-medium text-foreground">
+                                        Negotiation Prompt
+                                    </label>
+                                    <Textarea
+                                        value={prompt}
+                                        onChange={(e) => setPrompt(e.target.value)}
+                                        onKeyDown={handleKeyDown}
+                                        placeholder="e.g., Request best pricing for bulk order of 100 units with 30-day payment terms..."
+                                        className="min-h-[80px] resize-none border bg-muted text-foreground/90"
+                                        disabled={isProcessing || hasInitiatedNegotiation.current}
+                                    />
+                                    <div className="flex items-center justify-between pt-1">
+                                        <p className="text-xs text-muted-foreground">
+                                            Cmd + Enter to send
+                                        </p>
+                                        {!hasInitiatedNegotiation.current && (
+                                            <Button
+                                                onClick={handleSubmit}
+                                                disabled={!prompt.trim() || isProcessing}
+                                                variant="default"
+                                                size="sm"
+                                                className="gap-2"
+                                            >
+                                                <Send className="h-4 w-4" />
+                                                Send
+                                            </Button>
+                                        )}
+                                    </div>
+                                </div>
+                            ) : hasPromptBeenSent ? (
                                 <Tabs defaultValue="prompt" className="w-full">
                                     <TabsList className="grid w-full grid-cols-2 mb-4">
                                         <TabsTrigger value="prompt" className="gap-2">
@@ -251,16 +376,18 @@ export default function OrchestrationVisual({
                                             <p className="text-xs text-muted-foreground">
                                                 Cmd + Enter to send
                                             </p>
-                                            <Button
-                                                onClick={handleSubmit}
-                                                disabled={!prompt.trim() || isProcessing || hasInitiatedNegotiation.current}
-                                                variant="default"
-                                                size="sm"
-                                                className="gap-2"
-                                            >
-                                                <Send className="h-4 w-4"/>
-                                                Send
-                                            </Button>
+                                            {!hasInitiatedNegotiation.current && (
+                                                <Button
+                                                    onClick={handleSubmit}
+                                                    disabled={!prompt.trim() || isProcessing}
+                                                    variant="default"
+                                                    size="sm"
+                                                    className="gap-2"
+                                                >
+                                                    <Send className="h-4 w-4"/>
+                                                    Send
+                                                </Button>
+                                            )}
                                         </div>
                                     </TabsContent>
 
@@ -313,9 +440,9 @@ export default function OrchestrationVisual({
                                     />
 
                                     <div className="flex items-center justify-between pt-1">
-                                        <p className="text-xs text-muted-foreground">
+                                        <div className="text-xs text-muted-foreground">
                                             Cmd + Enter to send
-                                        </p>
+                                        </div>
                                         <Button
                                             onClick={handleSubmit}
                                             disabled={!prompt.trim() || isProcessing || hasInitiatedNegotiation.current}
@@ -327,6 +454,30 @@ export default function OrchestrationVisual({
                                             Send
                                         </Button>
                                     </div>
+                                </div>
+                            )}
+
+                            {/* Orchestrator overview summary from backend under the agent block */}
+                            {compactOrchestratorUI && (
+                                <div className="mt-5">
+                                    <h4 className="text-sm font-medium mb-1">Orchestrator Summary</h4>
+                                    {overviewLoading && !overview ? (
+                                        <p className="text-xs text-muted-foreground">Generating overview…</p>
+                                    ) : !overview ? (
+                                        <p className="text-xs text-muted-foreground">No overview available yet.</p>
+                                    ) : (
+                                        <>
+                                            <p className="text-[11px] text-muted-foreground mb-2">
+                                                Product: <span className="font-medium text-foreground">{overview.product}</span>{' '}
+                                                · Strategy: <span className="font-medium text-foreground">{overview.strategy}</span>
+                                            </p>
+                                            <div className="rounded-md bg-muted/70 border px-3 py-2 max-h-[220px] overflow-auto">
+                                                <p className="text-sm text-foreground whitespace-pre-wrap">
+                                                    {overview.overview}
+                                                </p>
+                                            </div>
+                                        </>
+                                    )}
                                 </div>
                             )}
                         </div>
@@ -426,9 +577,11 @@ export default function OrchestrationVisual({
                                                         const isCompleted = Boolean(agent?.completed);
                                                         const messageCount = typeof agent?.message_count === 'number' ? agent.message_count : undefined;
                                                         const talkingTo = agent?.supplier_name || supplier.name;
+                                                        const supplierSummaryItems = supplierSummaries[supplier.id];
+                                                        const isSummaryLoading = supplierSummariesLoading[supplier.id];
 
                                                         return (
-                                                            <div className="rounded-md bg-muted/60 border p-3">
+                                                            <div className="rounded-md bg-muted/60 border p-3 space-y-2">
                                                                 <div
                                                                     className="flex flex-wrap items-center gap-2 text-xs">
                                                                     {/* Running / Completed pill */}
@@ -481,6 +634,31 @@ export default function OrchestrationVisual({
                                     </span>
                                                                     )}
                                                                 </div>
+
+                                                                {/* Per-supplier negotiation summary once agent is completed */}
+                                                                {isCompleted && (
+                                                                    <div className="mt-1 rounded-md bg-background/80 border px-3 py-2">
+                                                                        <div className="flex items-center justify-between mb-1">
+                                                                            <span className="text-xs font-medium text-muted-foreground">
+                                                                                Negotiation Summary
+                                                                            </span>
+                                                                            {isSummaryLoading && (
+                                                                                <span className="text-[11px] text-muted-foreground">
+                                                                                    Loading…
+                                                                                </span>
+                                                                            )}
+                                                                        </div>
+                                                                        {supplierSummaryItems && supplierSummaryItems.length > 0 ? (
+                                                                            <p className="text-xs text-foreground whitespace-pre-wrap">
+                                                                                {supplierSummaryItems[0].summary}
+                                                                            </p>
+                                                                        ) : !isSummaryLoading ? (
+                                                                            <p className="text-[11px] text-muted-foreground">
+                                                                                No summary available yet.
+                                                                            </p>
+                                                                        ) : null}
+                                                                    </div>
+                                                                )}
                                                             </div>
                                                         );
                                                     })()}
