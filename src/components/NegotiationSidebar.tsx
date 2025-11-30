@@ -21,7 +21,7 @@ interface NegotiationSidebarProps {
   supplierCounts: Record<string, number>;
   previousNegotiations: Negotiation[];
   loadingNegotiations: boolean;
-  onNegotiationSelect: (id: number) => void;
+  onNegotiationSelect: (id: string | number) => void;
 }
 
 export function NegotiationSidebar({ 

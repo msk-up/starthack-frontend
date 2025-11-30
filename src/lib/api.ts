@@ -123,13 +123,13 @@ export async function getProducts(): Promise<ProductRow[]> {
 }
 
 export interface Negotiation {
-  negotiation_id: number;
+  negotiation_id: string | number;
   prompt: string;
   supplier_ids: string[];
   modes: string[];
   status: string;
-  created_at: string;
-  updated_at: string;
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface CreateNegotiationRequest {
@@ -137,23 +137,42 @@ export interface CreateNegotiationRequest {
   supplier_ids: string[];
   modes?: string[];
   status?: string;
+  product?: string; // Optional product name for new backend
+}
+
+// New backend negotiation structure
+export interface BackendNegotiation {
+  negotiation_id: string;
+  product: string;
+  strategy: string;
+  status: string;
+}
+
+export interface BackendNegotiationsResponse {
+  negotiations: BackendNegotiation[];
 }
 
 /**
- * Create a new negotiation
+ * Create a new negotiation using the new backend endpoint
  */
-export async function createNegotiation(request: CreateNegotiationRequest): Promise<{ negotiation_id: number; status: string }> {
+export async function createNegotiation(request: CreateNegotiationRequest): Promise<{ negotiation_id: string; status: string }> {
   try {
-    const response = await fetch(`${API_BASE_URL}/negotiations`, {
+    // Map frontend format to backend format
+    // Backend expects: product, prompt, tactics, suppliers
+    // Frontend provides: prompt, supplier_ids, modes
+    const tactics = (request.modes || []).join(', ') || request.prompt.substring(0, 100);
+    const product = request.product || request.prompt.substring(0, 200) || 'General Product';
+    
+    const response = await fetch(`${API_BASE_URL}/negotiate`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
+        product: product,
         prompt: request.prompt,
-        supplier_ids: request.supplier_ids,
-        modes: request.modes || [],
-        status: request.status || 'pending',
+        tactics: tactics,
+        suppliers: request.supplier_ids,
       }),
     });
 
@@ -162,7 +181,12 @@ export async function createNegotiation(request: CreateNegotiationRequest): Prom
       throw new Error(`Failed to create negotiation: ${response.status} ${errorText}`);
     }
 
-    return await response.json();
+    const result = await response.json();
+    // Backend returns: { negotiation_id: string, status: string, suppliers: string[] }
+    return {
+      negotiation_id: result.negotiation_id,
+      status: result.status || 'started',
+    };
   } catch (error) {
     console.error('Error creating negotiation:', error);
     throw error;
@@ -170,11 +194,11 @@ export async function createNegotiation(request: CreateNegotiationRequest): Prom
 }
 
 /**
- * Get all negotiations
+ * Get all negotiations using the new backend endpoint
  */
 export async function getNegotiations(): Promise<Negotiation[]> {
   try {
-    const response = await fetch(`${API_BASE_URL}/negotiations`, {
+    const response = await fetch(`${API_BASE_URL}/get_negotations`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -194,7 +218,36 @@ export async function getNegotiations(): Promise<Negotiation[]> {
       throw new Error(`Failed to fetch negotiations: ${response.status} ${response.statusText}`);
     }
 
-    return await response.json();
+    const data: BackendNegotiationsResponse = await response.json();
+    
+    // Map backend format to frontend format
+    // Backend returns: { negotiations: [{ negotiation_id, product, strategy, status }] }
+    // Frontend expects: [{ negotiation_id, prompt, supplier_ids, modes, status, created_at, updated_at }]
+    const negotiations: Negotiation[] = (data.negotiations || []).map((ng) => ({
+      negotiation_id: ng.negotiation_id,
+      prompt: ng.product || '', // Use product as prompt
+      supplier_ids: [], // Will need to fetch from agent table separately
+      modes: ng.strategy ? ng.strategy.split(', ').filter(m => m.trim()) : [],
+      status: ng.status || 'pending',
+      created_at: new Date().toISOString(), // Backend doesn't provide this yet
+      updated_at: new Date().toISOString(),
+    }));
+
+    // Try to fetch supplier_ids from agent table for each negotiation
+    // This is a workaround since the backend doesn't return supplier_ids directly
+    try {
+      for (const ng of negotiations) {
+        const statusResponse = await fetch(`${API_BASE_URL}/negotiation_status/${ng.negotiation_id}`);
+        if (statusResponse.ok) {
+          const statusData = await statusResponse.json();
+          ng.supplier_ids = (statusData.agents || []).map((a: any) => a.supplier_id);
+        }
+      }
+    } catch (err) {
+      console.warn('Could not fetch supplier_ids for negotiations:', err);
+    }
+
+    return negotiations;
   } catch (error) {
     console.error('Error fetching negotiations:', error);
     // If it's a network error, return empty array instead of throwing
@@ -209,26 +262,27 @@ export async function getNegotiations(): Promise<Negotiation[]> {
 
 /**
  * Get a specific negotiation by ID
+ * Note: The new backend doesn't have a direct endpoint for this,
+ * so we'll fetch all and filter, or use negotiation_status
  */
-export async function getNegotiationById(negotiationId: number): Promise<Negotiation | null> {
+export async function getNegotiationById(negotiationId: string | number): Promise<Negotiation | null> {
   try {
-    const response = await fetch(`${API_BASE_URL}/negotiations/${negotiationId}`, {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-
-    if (!response.ok) {
-      if (response.status === 404) {
-        return null;
-      }
-      throw new Error(`Failed to fetch negotiation: ${response.statusText}`);
+    // Try to get from negotiation_status endpoint first
+    const statusResponse = await fetch(`${API_BASE_URL}/negotiation_status/${negotiationId}`);
+    if (statusResponse.ok) {
+      const statusData = await statusResponse.json();
+      // We still need the main negotiation data, so fetch all and filter
     }
 
-    return await response.json();
+    // Fetch all negotiations and find the one we need
+    const allNegotiations = await getNegotiations();
+    const negotiation = allNegotiations.find(n => 
+      String(n.negotiation_id) === String(negotiationId)
+    );
+    
+    return negotiation || null;
   } catch (error) {
     console.error('Error fetching negotiation:', error);
-    throw error;
+    return null;
   }
 }

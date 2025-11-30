@@ -126,6 +126,14 @@ export default function SearchPage() {
             <Link to="/" className="cursor-pointer hover:opacity-80 transition-opacity">
               <Logo className="text-foreground" />
             </Link>
+            <nav className="flex items-center gap-4">
+              <Link 
+                to="/negotiations-history" 
+                className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Negotiations History
+              </Link>
+            </nav>
           </div>
         </div>
       </header>

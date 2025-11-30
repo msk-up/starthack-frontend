@@ -1,7 +1,8 @@
 fastapi
-uvicorn[standard]
+uvicorn
 asyncpg
 boto3
-python-dotenv
-pydantic
-
+dotenv
+aiosmtplib
+aioimaplib
+uuid

@@ -1,4 +1,4 @@
-import { useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation, Link } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -143,7 +143,7 @@ export default function NegotiationPage() {
       }
     });
   };
-  const handleNegotiationSelect = async (negotiationId: number) => {
+  const handleNegotiationSelect = async (negotiationId: string | number) => {
     try {
       setIsProcessing(true);
       const negotiation = await getNegotiationById(negotiationId);
@@ -292,9 +292,17 @@ export default function NegotiationPage() {
               </Button>
               <h1 className="text-2xl font-title font-light tracking-tight">Negotiation Dashboard</h1>
             </div>
-            <Badge variant="secondary" className="px-4 py-2 text-sm font-medium rounded-full">
-              {selectedSuppliers.length} Active Suppliers
-            </Badge>
+            <div className="flex items-center gap-4">
+              <Link 
+                to="/negotiations-history" 
+                className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+              >
+                View History
+              </Link>
+              <Badge variant="secondary" className="px-4 py-2 text-sm font-medium rounded-full">
+                {selectedSuppliers.length} Active Suppliers
+              </Badge>
+            </div>
           </div>
         </div>
       </header>
