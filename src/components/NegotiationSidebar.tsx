@@ -21,6 +21,7 @@ interface NegotiationSidebarProps {
   supplierCounts: Record<string, number>;
   previousNegotiations: Negotiation[];
   loadingNegotiations: boolean;
+  onNegotiationSelect: (id: number) => void;
 }
 
 export function NegotiationSidebar({ 
@@ -28,7 +29,8 @@ export function NegotiationSidebar({
   onCategoryChange,
   supplierCounts,
   previousNegotiations,
-  loadingNegotiations
+  loadingNegotiations,
+  onNegotiationSelect
 }: NegotiationSidebarProps) {
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -103,6 +105,7 @@ export function NegotiationSidebar({
                       key={negotiation.negotiation_id}
                       variant="ghost"
                       className="w-full justify-start text-left h-auto p-3 flex flex-col items-start gap-2"
+                      onClick={() => onNegotiationSelect(negotiation.negotiation_id)}
                     >
                       <div className="flex items-start justify-between w-full gap-2">
                         <div className="flex-1 min-w-0">

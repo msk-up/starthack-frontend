@@ -30,6 +30,13 @@ export interface Supplier {
   [key: string]: any;
 }
 
+export interface ProductRow {
+  product_id: string;
+  product_name: string;
+  supplier_id: string;
+  supplier_name?: string;
+  [key: string]: any;
+}
 export interface SearchResponse {
   products: Product[];
 }
@@ -97,6 +104,21 @@ export async function getSupplierById(supplierId: string): Promise<Supplier | nu
   } catch (error) {
     console.error('Error fetching supplier:', error);
     return null;
+  }
+}
+
+export async function getProducts(): Promise<ProductRow[]> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/products`);
+    
+    if (!response.ok) {
+      throw new Error(`Failed to fetch products: ${response.statusText}`);
+    }
+    
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching products:', error);
+    throw error;
   }
 }
 
@@ -210,4 +232,3 @@ export async function getNegotiationById(negotiationId: number): Promise<Negotia
     throw error;
   }
 }
-

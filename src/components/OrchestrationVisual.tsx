@@ -22,24 +22,41 @@ interface OrchestrationVisualProps {
   onSupplierClick: (id: string) => void;
   isProcessing: boolean;
   onPromptSubmit: (prompt: string, tones: string[]) => void;
+  initialPrompt?: string;
+  initialTones?: string[];
+  initialHasPromptBeenSent?: boolean;
 }
 
 export default function OrchestrationVisual({ 
   suppliers, 
   onSupplierClick,
   isProcessing,
-  onPromptSubmit
+  onPromptSubmit,
+  initialPrompt,
+  initialTones,
+  initialHasPromptBeenSent = false
 }: OrchestrationVisualProps) {
-  const [prompt, setPrompt] = useState('');
+  const [prompt, setPrompt] = useState(initialPrompt || '');
   const [animatingIndex, setAnimatingIndex] = useState<number | null>(null);
   const [showToneSelector, setShowToneSelector] = useState(false);
   const [researchingSuppliers, setResearchingSuppliers] = useState<Set<string>>(new Set());
   const [supplierStates, setSupplierStates] = useState<Record<string, { unreadCount: number; hasOutcome: boolean }>>({});
-  const [selectedTones, setSelectedTones] = useState<string[]>([]);
-  const [hasPromptBeenSent, setHasPromptBeenSent] = useState(false);
+  const [selectedTones, setSelectedTones] = useState<string[]>(initialTones || []);
+  const [hasPromptBeenSent, setHasPromptBeenSent] = useState(initialHasPromptBeenSent);
   const [toneSelectorKey, setToneSelectorKey] = useState(0);
   const animationStarted = useRef(false);
-  const hasInitiatedNegotiation = useRef(false);
+  const hasInitiatedNegotiation = useRef(initialHasPromptBeenSent);
+
+  useEffect(() => {
+    if (initialPrompt) {
+      setPrompt(initialPrompt);
+      setHasPromptBeenSent(initialHasPromptBeenSent);
+      hasInitiatedNegotiation.current = initialHasPromptBeenSent;
+    }
+    if (initialTones && initialTones.length > 0) {
+      setSelectedTones(initialTones);
+    }
+  }, [initialPrompt, initialHasPromptBeenSent, initialTones]);
 
   // Initialize supplier states with mock data
   useEffect(() => {

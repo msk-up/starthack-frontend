@@ -7,7 +7,7 @@ import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { NegotiationSidebar } from '@/components/NegotiationSidebar';
 import { mockSuppliers, mockConversations } from '@/lib/mockData';
 import { ProductCategory, Supplier } from '@/types/procurement';
-import { createNegotiation, getNegotiations, type Negotiation } from '@/lib/api';
+import { createNegotiation, getNegotiations, getNegotiationById, getSuppliers, getProducts, type Negotiation } from '@/lib/api';
 import OrchestrationVisual from '@/components/OrchestrationVisual';
 
 interface SupplierWithProducts {
@@ -17,12 +17,20 @@ interface SupplierWithProducts {
   products: any[];
 }
 
+interface NegotiationState {
+  suppliers?: (SupplierWithProducts | Supplier)[];
+  negotiationPrompt?: string;
+  negotiationTones?: string[];
+}
+
 export default function NegotiationPage() {
   const navigate = useNavigate();
   const location = useLocation();
   
   // Get suppliers from location state (passed from SearchPage) or fallback to URL params
-  const suppliersFromState = (location.state as { suppliers?: SupplierWithProducts[] })?.suppliers;
+  const suppliersFromState = (location.state as NegotiationState | undefined)?.suppliers;
+  const negotiationPromptFromState = (location.state as NegotiationState | undefined)?.negotiationPrompt;
+  const negotiationTonesFromState = (location.state as NegotiationState | undefined)?.negotiationTones;
   
   // Convert SupplierWithProducts to Supplier format if needed
   const selectedSuppliers: Supplier[] = suppliersFromState 
@@ -134,6 +142,94 @@ export default function NegotiationPage() {
       }
     });
   };
+  const handleNegotiationSelect = async (negotiationId: number) => {
+    try {
+      setIsProcessing(true);
+      const negotiation = await getNegotiationById(negotiationId);
+      if (!negotiation) {
+        console.warn('Negotiation not found', negotiationId);
+        return;
+      }
+
+      let supplierList: any[] = [];
+      let products: any[] = [];
+      try {
+        const apiSuppliers = await getSuppliers();
+        supplierList = Array.isArray(apiSuppliers)
+          ? apiSuppliers
+          : (apiSuppliers as any)?.suppliers || [];
+      } catch (err) {
+        console.warn('Failed to fetch suppliers, falling back to ids only', err);
+      }
+      try {
+        products = await getProducts();
+      } catch (err) {
+        console.warn('Failed to fetch products for supplier names', err);
+      }
+
+      // Normalize supplier list for easier lookup
+      const supplierMap = new Map<string, Supplier>();
+      supplierList.forEach((s: any) => {
+        const id = String(s?.supplier_id || s?.id || s?.supplier_name || '').trim();
+        if (!id) return;
+        const normalized: Supplier = {
+          id,
+          name: s?.supplier_name || s?.name || id,
+          category: (s?.category as ProductCategory) || 'electronics',
+          rating: s?.rating || 0,
+          responseTime: s?.response_time || s?.responseTime || '',
+          priceRange: s?.price_range || s?.priceRange || '',
+          location: s?.location || '',
+        };
+        supplierMap.set(id, normalized);
+        if (s?.supplier_name) supplierMap.set(String(s.supplier_name), normalized);
+      });
+
+      const mappedSuppliers: Supplier[] = (negotiation.supplier_ids || []).map((id) => {
+        const key = String(id).trim();
+
+        // Always try to derive the name from products by supplier_id
+        const productMatch = products.find((p: any) => p?.supplier_id === key);
+        if (productMatch) {
+          return {
+            id: key,
+            name: productMatch.supplier_name || `Supplier ${key}`,
+            category: (productMatch.category as ProductCategory) || 'electronics',
+            rating: 0,
+            responseTime: '',
+            priceRange: '',
+            location: '',
+          };
+        }
+
+        // Fallback to supplier map
+        const match = supplierMap.get(key);
+        if (match) return match;
+
+        return {
+          id: key,
+          name: `Supplier ${key}`,
+          category: 'electronics',
+          rating: 0,
+          responseTime: '',
+          priceRange: '',
+          location: '',
+        };
+      });
+
+      navigate('/negotiation', {
+        state: {
+          suppliers: mappedSuppliers,
+          negotiationPrompt: negotiation.prompt,
+          negotiationTones: negotiation.modes || [],
+        },
+      });
+    } catch (error) {
+      console.error('Error opening negotiation', error);
+    } finally {
+      setIsProcessing(false);
+    }
+  };
 
   // Transform suppliers into seat format
   const supplierSeats = categorizedSuppliers.map(supplier => {
@@ -152,13 +248,14 @@ export default function NegotiationPage() {
     <SidebarProvider>
       <div className="min-h-screen w-full flex bg-background">
         {/* Sidebar */}
-        <NegotiationSidebar
-          activeCategory={activeCategory}
-          onCategoryChange={setActiveCategory}
-          supplierCounts={supplierCounts}
-          previousNegotiations={previousNegotiations}
-          loadingNegotiations={loadingNegotiations}
-        />
+          <NegotiationSidebar
+            activeCategory={activeCategory}
+            onCategoryChange={setActiveCategory}
+            supplierCounts={supplierCounts}
+            previousNegotiations={previousNegotiations}
+            loadingNegotiations={loadingNegotiations}
+            onNegotiationSelect={handleNegotiationSelect}
+          />
 
         {/* Main Content */}
         <div className="flex-1 flex flex-col">
@@ -188,6 +285,9 @@ export default function NegotiationPage() {
                   onSupplierClick={handleSupplierClick}
                   isProcessing={isProcessing}
                   onPromptSubmit={handlePromptSubmit}
+                  initialPrompt={negotiationPromptFromState}
+                  initialTones={negotiationTonesFromState}
+                  initialHasPromptBeenSent={!!negotiationPromptFromState}
                 />
               </div>
             </div>
@@ -197,4 +297,3 @@ export default function NegotiationPage() {
     </SidebarProvider>
   );
 }
-
