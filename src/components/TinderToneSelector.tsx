@@ -52,7 +52,14 @@ export default function TinderToneSelector({ supplierNames, onComplete }: Tinder
   const currentTone = TONE_OPTIONS[currentIndex];
   const progress = ((currentIndex) / TONE_OPTIONS.length) * 100;
 
+  // Safety check: if currentTone is undefined, return early
+  if (!currentTone) {
+    return null;
+  }
+
   const handleSwipe = (liked: boolean) => {
+    if (!currentTone) return;
+    
     setSwipeDirection(liked ? 'right' : 'left');
     
     if (liked) {

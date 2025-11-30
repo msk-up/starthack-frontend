@@ -6,11 +6,14 @@ import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
-import { Supplier } from '@/types/procurement';
+import { Supplier, ProductCategory } from '@/types/procurement';
 import { Logo } from '@/components/Logo';
 import { searchProducts, getSuppliers, checkApiHealth, type Product } from '@/lib/api';
 
-interface SupplierWithProducts extends Supplier {
+interface SupplierWithProducts {
+  id: string;
+  name: string;
+  category: ProductCategory;
   products: Product[];
 }
 
@@ -61,10 +64,6 @@ export default function SearchPage() {
               id: supplierId,
               name: product.supplier_name || 'Unknown Supplier',
               category: 'electronics' as const, // Default category, you can enhance this
-              rating: 4.5, // Default rating, you can fetch from API later
-              responseTime: '2h', // Default, you can fetch from API later
-              priceRange: '$$', // Default, you can fetch from API later
-              location: 'Unknown', // Default, you can fetch from API later
               products: [],
             });
           }
@@ -93,11 +92,25 @@ export default function SearchPage() {
     );
   };
 
+  const toggleSelectAll = () => {
+    if (selectedSuppliers.length === suppliers.length) {
+      // Deselect all
+      setSelectedSuppliers([]);
+    } else {
+      // Select all
+      setSelectedSuppliers(suppliers.map(s => s.id));
+    }
+  };
+
   const handleProceed = () => {
     if (selectedSuppliers.length > 0) {
-      const params = new URLSearchParams();
-      selectedSuppliers.forEach(id => params.append('supplier', id));
-      navigate(`/negotiation?${params.toString()}`);
+      // Get the full supplier objects for selected suppliers
+      const selectedSupplierObjects = suppliers.filter(s => selectedSuppliers.includes(s.id));
+      
+      // Pass suppliers via state instead of just IDs
+      navigate('/negotiation', {
+        state: { suppliers: selectedSupplierObjects }
+      });
     }
   };
 
@@ -138,7 +151,7 @@ export default function SearchPage() {
               <div className="absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-muted/30 to-transparent" />
               <Input
                 type="text"
-                placeholder="Search for products (e.g., laptops, steel, hoodies)..."
+                placeholder="Search for products..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 onKeyDown={(e) => {
@@ -220,9 +233,26 @@ export default function SearchPage() {
         <section className="relative container mx-auto px-6 pb-24">
           <div className="max-w-5xl mx-auto">
             <div className="mb-8 flex items-center justify-between">
-              <h3 className="text-2xl font-title font-light">
-                {isLoading ? 'Searching...' : suppliers.length > 0 ? 'Available Suppliers' : 'No Results'}
-              </h3>
+              <div className="flex items-center gap-4">
+                <h3 className="text-2xl font-title font-light">
+                  {isLoading ? 'Searching...' : suppliers.length > 0 ? 'Available Suppliers' : 'No Results'}
+                </h3>
+                {suppliers.length > 0 && (
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      checked={selectedSuppliers.length === suppliers.length && suppliers.length > 0}
+                      onCheckedChange={toggleSelectAll}
+                      className="h-5 w-5"
+                    />
+                    <label 
+                      onClick={toggleSelectAll}
+                      className="text-sm font-medium cursor-pointer text-muted-foreground hover:text-foreground"
+                    >
+                      Select All
+                    </label>
+                  </div>
+                )}
+              </div>
               {selectedSuppliers.length > 0 && (
                 <Button onClick={handleProceed} size="default" variant="default" className="gap-2">
                   Proceed with {selectedSuppliers.length} Supplier
@@ -268,13 +298,12 @@ export default function SearchPage() {
                       </div>
 
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-3 mb-1">
+                        <div className="flex items-center gap-3 mb-2">
                           <h4 className="text-base font-semibold">{supplier.name}</h4>
                           <Badge variant="outline" className="px-2 py-0.5 text-xs">
                             {supplier.products.length} product{supplier.products.length !== 1 ? 's' : ''}
                           </Badge>
                         </div>
-                        <p className="text-sm text-muted-foreground mb-2">{supplier.location}</p>
                         <div className="flex flex-wrap gap-2">
                           {supplier.products.slice(0, 3).map((product) => (
                             <Badge key={product.product_id} variant="secondary" className="text-xs">
@@ -286,17 +315,6 @@ export default function SearchPage() {
                               +{supplier.products.length - 3} more
                             </Badge>
                           )}
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-6 text-sm">
-                        <div className="text-center">
-                          <div className="font-semibold">{supplier.rating}</div>
-                          <div className="text-xs text-muted-foreground">Rating</div>
-                        </div>
-                        <div className="text-center">
-                          <div className="font-semibold">{supplier.responseTime}</div>
-                          <div className="text-xs text-muted-foreground">Response</div>
                         </div>
                       </div>
                     </div>

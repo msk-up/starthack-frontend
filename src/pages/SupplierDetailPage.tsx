@@ -5,7 +5,15 @@ import { Card } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { mockSuppliers, mockConversations, mockOffers } from '@/lib/mockData';
+import { Supplier } from '@/types/procurement';
 import { cn } from '@/lib/utils';
+
+interface SupplierWithProducts {
+  id: string;
+  name: string;
+  category: string;
+  products: any[];
+}
 
 export default function SupplierDetailPage() {
   const navigate = useNavigate();
@@ -14,7 +22,26 @@ export default function SupplierDetailPage() {
   const searchParams = new URLSearchParams(location.search);
   const category = searchParams.get('category');
 
-  const supplier = mockSuppliers.find((s) => s.id === supplierId);
+  // Try to get supplier from location state (passed from NegotiationPage)
+  const suppliersFromState = (location.state as { suppliers?: SupplierWithProducts[] })?.suppliers;
+  const supplierFromState = suppliersFromState?.find((s) => s.id === supplierId);
+  
+  // Fallback to mock data if not found in state
+  const mockSupplier = mockSuppliers.find((s) => s.id === supplierId);
+  
+  // Use supplier from state if available, otherwise use mock
+  const supplier: Supplier | null = supplierFromState 
+    ? {
+        id: supplierFromState.id,
+        name: supplierFromState.name,
+        category: supplierFromState.category as any,
+        rating: 0,
+        responseTime: '',
+        priceRange: '',
+        location: '',
+      }
+    : mockSupplier || null;
+    
   const conversation = mockConversations.find((c) => c.supplierId === supplierId);
   const offer = mockOffers.find((o) => o.supplierId === supplierId);
 
@@ -67,7 +94,9 @@ export default function SupplierDetailPage() {
             <div className="mb-6 flex items-start justify-between">
               <div>
                 <h2 className="mb-2 text-2xl font-title font-light">{supplier.name}</h2>
-                <p className="text-muted-foreground text-base">{supplier.location}</p>
+                {supplier.location && (
+                  <p className="text-muted-foreground text-base">{supplier.location}</p>
+                )}
               </div>
               {conversation && (
                 <Badge variant="outline" className="px-3 py-1 text-sm font-medium">

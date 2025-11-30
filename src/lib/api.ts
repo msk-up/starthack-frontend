@@ -100,3 +100,114 @@ export async function getSupplierById(supplierId: string): Promise<Supplier | nu
   }
 }
 
+export interface Negotiation {
+  negotiation_id: number;
+  prompt: string;
+  supplier_ids: string[];
+  modes: string[];
+  status: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateNegotiationRequest {
+  prompt: string;
+  supplier_ids: string[];
+  modes?: string[];
+  status?: string;
+}
+
+/**
+ * Create a new negotiation
+ */
+export async function createNegotiation(request: CreateNegotiationRequest): Promise<{ negotiation_id: number; status: string }> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/negotiations`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        prompt: request.prompt,
+        supplier_ids: request.supplier_ids,
+        modes: request.modes || [],
+        status: request.status || 'pending',
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Failed to create negotiation: ${response.status} ${errorText}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error creating negotiation:', error);
+    throw error;
+  }
+}
+
+/**
+ * Get all negotiations
+ */
+export async function getNegotiations(): Promise<Negotiation[]> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/negotiations`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error(`Failed to fetch negotiations: ${response.status} ${response.statusText} - ${errorText}`);
+      
+      // If 404, the endpoint might not exist or table doesn't exist - return empty array
+      if (response.status === 404) {
+        console.warn('Negotiations endpoint returned 404. Returning empty array.');
+        return [];
+      }
+      
+      throw new Error(`Failed to fetch negotiations: ${response.status} ${response.statusText}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching negotiations:', error);
+    // If it's a network error, return empty array instead of throwing
+    if (error instanceof TypeError && error.message.includes('fetch')) {
+      console.warn('Cannot connect to backend for negotiations. Returning empty array.');
+      return [];
+    }
+    // For other errors, return empty array to prevent UI breaking
+    return [];
+  }
+}
+
+/**
+ * Get a specific negotiation by ID
+ */
+export async function getNegotiationById(negotiationId: number): Promise<Negotiation | null> {
+  try {
+    const response = await fetch(`${API_BASE_URL}/negotiations/${negotiationId}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    if (!response.ok) {
+      if (response.status === 404) {
+        return null;
+      }
+      throw new Error(`Failed to fetch negotiation: ${response.statusText}`);
+    }
+
+    return await response.json();
+  } catch (error) {
+    console.error('Error fetching negotiation:', error);
+    throw error;
+  }
+}
+

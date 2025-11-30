@@ -1,21 +1,46 @@
 import { useNavigate, useLocation } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import { NegotiationSidebar } from '@/components/NegotiationSidebar';
 import { mockSuppliers, mockConversations } from '@/lib/mockData';
-import { ProductCategory } from '@/types/procurement';
+import { ProductCategory, Supplier } from '@/types/procurement';
+import { createNegotiation, getNegotiations, type Negotiation } from '@/lib/api';
 import OrchestrationVisual from '@/components/OrchestrationVisual';
+
+interface SupplierWithProducts {
+  id: string;
+  name: string;
+  category: ProductCategory;
+  products: any[];
+}
 
 export default function NegotiationPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const searchParams = new URLSearchParams(location.search);
-  const selectedSupplierIds = searchParams.getAll('supplier');
   
-  const selectedSuppliers = mockSuppliers.filter((s) => selectedSupplierIds.includes(s.id));
+  // Get suppliers from location state (passed from SearchPage) or fallback to URL params
+  const suppliersFromState = (location.state as { suppliers?: SupplierWithProducts[] })?.suppliers;
+  
+  // Convert SupplierWithProducts to Supplier format if needed
+  const selectedSuppliers: Supplier[] = suppliersFromState 
+    ? suppliersFromState.map(s => ({
+        id: s.id,
+        name: s.name,
+        category: s.category,
+        rating: 0, // Not available from search
+        responseTime: '', // Not available from search
+        priceRange: '', // Not available from search
+        location: '', // Not available from search
+      }))
+    : (() => {
+        // Fallback: try URL params (for backward compatibility)
+        const searchParams = new URLSearchParams(location.search);
+        const selectedSupplierIds = searchParams.getAll('supplier');
+        return mockSuppliers.filter((s) => selectedSupplierIds.includes(s.id));
+      })();
   
   // Calculate supplier counts per category
   const supplierCounts = selectedSuppliers.reduce((acc, supplier) => {
@@ -36,22 +61,78 @@ export default function NegotiationPage() {
 
   const [activeCategory, setActiveCategory] = useState<ProductCategory>(getDefaultCategory());
   const [isProcessing, setIsProcessing] = useState(false);
+  const [previousNegotiations, setPreviousNegotiations] = useState<Negotiation[]>([]);
+  const [loadingNegotiations, setLoadingNegotiations] = useState(true);
 
   const categorizedSuppliers = selectedSuppliers.filter((s) => s.category === activeCategory);
 
-  const handlePromptSubmit = (prompt: string) => {
-    console.log('Prompt submitted:', prompt);
+  // Fetch previous negotiations on mount and after creating a new one
+  useEffect(() => {
+    const fetchNegotiations = async () => {
+      try {
+        setLoadingNegotiations(true);
+        const negotiations = await getNegotiations();
+        setPreviousNegotiations(negotiations || []);
+      } catch (error) {
+        console.error('Error fetching negotiations:', error);
+        setPreviousNegotiations([]);
+      } finally {
+        setLoadingNegotiations(false);
+      }
+    };
+
+    fetchNegotiations();
+  }, []);
+
+  const handlePromptSubmit = async (prompt: string, tones: string[] = []) => {
+    console.log('Prompt submitted:', prompt, 'Tones:', tones);
     setIsProcessing(true);
     
-    // Simulate processing
-    setTimeout(() => {
+    try {
+      // Get supplier IDs
+      const supplierIds = selectedSuppliers.map(s => s.id);
+      
+      // Save negotiation to database with tones from TinderToneSelector
+      const result = await createNegotiation({
+        prompt: prompt,
+        supplier_ids: supplierIds,
+        modes: tones, // Use tones from TinderToneSelector
+        status: 'pending',
+      });
+      
+      console.log('Negotiation created:', result);
+      
+      // Refresh negotiations list
+      try {
+        const negotiations = await getNegotiations();
+        setPreviousNegotiations(negotiations);
+      } catch (error) {
+        console.error('Error refreshing negotiations:', error);
+      }
+      
+      // Simulate processing
+      setTimeout(() => {
+        setIsProcessing(false);
+      }, 5000);
+    } catch (error) {
+      console.error('Error creating negotiation:', error);
       setIsProcessing(false);
-    }, 5000);
+      // Still continue with processing even if save fails
+    }
   };
 
   const handleSupplierClick = (supplierId: string) => {
-    // Navigate to detail view with supplier ID and category
-    navigate(`/negotiation/${supplierId}?category=${activeCategory}`);
+    // Navigate to detail view with supplier ID and category, passing supplier data via state
+    navigate(`/negotiation/${supplierId}?category=${activeCategory}`, {
+      state: { 
+        suppliers: suppliersFromState || selectedSuppliers.map(s => ({
+          id: s.id,
+          name: s.name,
+          category: s.category,
+          products: []
+        }))
+      }
+    });
   };
 
   // Transform suppliers into seat format
@@ -75,6 +156,8 @@ export default function NegotiationPage() {
           activeCategory={activeCategory}
           onCategoryChange={setActiveCategory}
           supplierCounts={supplierCounts}
+          previousNegotiations={previousNegotiations}
+          loadingNegotiations={loadingNegotiations}
         />
 
         {/* Main Content */}
