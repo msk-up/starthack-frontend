@@ -64,12 +64,26 @@ app = FastAPI(title="Health API", version="0.1.0", lifespan=lifespan)
 allowed_origins = [
     origin.strip() for origin in FRONTEND_ORIGINS.split(",") if origin.strip()
 ] or ["*"]
+
+# Always include common localhost origins for development
+if "*" not in allowed_origins:
+    localhost_origins = [
+        "http://localhost:5173",
+        "http://localhost:8080",
+        "http://localhost:8081",
+        "http://localhost:3000",
+    ]
+    for origin in localhost_origins:
+        if origin not in allowed_origins:
+            allowed_origins.append(origin)
+
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
 
 

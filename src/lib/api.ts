@@ -144,24 +144,64 @@ export interface ConversationResponse {
  */
 export async function getConversation(negotiationId: string, supplierId: string): Promise<Message[]> {
   try {
-    const response = await fetch(`${API_BASE_URL}/conversation/${negotiationId}/${supplierId}`, {
+    console.log(`[getConversation] Fetching conversation for negotiationId: ${negotiationId}, supplierId: ${supplierId}`);
+    const url = `${API_BASE_URL}/conversation/${encodeURIComponent(negotiationId)}/${encodeURIComponent(supplierId)}`;
+    console.log(`[getConversation] URL: ${url}`);
+    
+    const response = await fetch(url, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
       },
     });
 
+    console.log(`[getConversation] Response status: ${response.status}`);
+
     if (!response.ok) {
+      // For 500 errors, backend might return empty array, so try to parse JSON first
+      if (response.status === 500) {
+        try {
+          const data = await response.json();
+          if (data.message) {
+            console.warn(`[getConversation] Backend returned 500 but with data:`, data);
+            return data.message || [];
+          }
+        } catch (e) {
+          // If JSON parsing fails, continue with error handling
+        }
+      }
+      
+      const errorText = await response.text();
+      console.error(`[getConversation] Error response: ${response.status} ${response.statusText} - ${errorText}`);
+      
       if (response.status === 404) {
+        console.warn(`[getConversation] No messages found for negotiation ${negotiationId} and supplier ${supplierId}`);
         return [];
       }
-      throw new Error(`Failed to fetch conversation: ${response.statusText}`);
+      
+      // For other errors, return empty array instead of throwing
+      console.warn(`[getConversation] Request failed with status ${response.status}, returning empty array`);
+      return [];
     }
 
     const data: ConversationResponse = await response.json();
-    return data.message || [];
+    console.log(`[getConversation] Received data:`, data);
+    const messages = data.message || [];
+    console.log(`[getConversation] Returning ${messages.length} messages`);
+    return messages;
   } catch (error) {
-    console.error('Error fetching conversation:', error);
+    console.error('[getConversation] Error fetching conversation:', error);
+    
+    // Handle CORS and network errors gracefully
+    if (error instanceof TypeError) {
+      if (error.message.includes('fetch') || error.message.includes('Failed to fetch')) {
+        console.error('[getConversation] Network/CORS error - backend might be down or CORS not configured');
+        // Return empty array instead of crashing
+        return [];
+      }
+    }
+    
+    // For any other error, return empty array
     return [];
   }
 }

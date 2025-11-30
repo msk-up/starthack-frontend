@@ -34,6 +34,16 @@ export default function SupplierDetailPage() {
   // Get state from location
   const state = location.state as SupplierDetailState | undefined;
   const negotiationId = state?.negotiationId || negotiationIdFromUrl;
+  
+  // Debug logging
+  console.log('SupplierDetailPage render:', {
+    supplierId,
+    negotiationId,
+    negotiationIdFromUrl,
+    state,
+    hasState: !!state,
+    hasNegotiationIdInState: !!state?.negotiationId
+  });
 
   // Try to get supplier from location state (passed from NegotiationPage)
   const suppliersFromState = state?.suppliers;
@@ -57,6 +67,7 @@ export default function SupplierDetailPage() {
     
   const [messages, setMessages] = useState<Message[]>([]);
   const [loadingMessages, setLoadingMessages] = useState(false);
+  const [fetchError, setFetchError] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const mockConversation = mockConversations.find((c) => c.supplierId === supplierId);
   const offer = mockOffers.find((o) => o.supplierId === supplierId);
@@ -71,30 +82,59 @@ export default function SupplierDetailPage() {
   // Fetch messages from backend if negotiation_id is available
   useEffect(() => {
     const fetchMessages = async () => {
-      if (negotiationId && supplierId) {
-        setLoadingMessages(true);
-        try {
-          const fetchedMessages = await getConversation(String(negotiationId), String(supplierId));
-          
-          // Sort messages by timestamp
-          const sortedMessages = [...fetchedMessages].sort((a, b) => {
-            const timeA = new Date(a.timestamp || a.created_at || 0).getTime();
-            const timeB = new Date(b.timestamp || b.created_at || 0).getTime();
-            return timeA - timeB;
-          });
-          
-          setMessages(sortedMessages);
-          console.log('Fetched and sorted messages:', sortedMessages);
-        } catch (error) {
-          console.error('Error fetching messages:', error);
-        } finally {
-          setLoadingMessages(false);
+      console.log('Fetching messages with:', { negotiationId, supplierId, state });
+      
+      if (!negotiationId) {
+        console.warn('No negotiationId available. State:', state);
+        return;
+      }
+      
+      if (!supplierId) {
+        console.warn('No supplierId available');
+        return;
+      }
+      
+      setLoadingMessages(true);
+      setFetchError(null);
+      try {
+        console.log(`Calling getConversation with negotiationId: ${negotiationId}, supplierId: ${supplierId}`);
+        const fetchedMessages = await getConversation(String(negotiationId), String(supplierId));
+        console.log('Raw fetched messages:', fetchedMessages);
+        
+        // Sort messages by timestamp
+        const sortedMessages = [...fetchedMessages].sort((a, b) => {
+          const timeA = new Date(a.timestamp || a.created_at || 0).getTime();
+          const timeB = new Date(b.timestamp || b.created_at || 0).getTime();
+          return timeA - timeB;
+        });
+        
+        console.log('Sorted messages:', sortedMessages);
+        setMessages(sortedMessages);
+        
+        // If we got empty array but have negotiationId, it might be a CORS issue
+        if (sortedMessages.length === 0 && negotiationId) {
+          // Check if there was a network error (likely CORS)
+          const errorCheck = await fetch(`${import.meta.env.VITE_API_BASE_URL || 'http://localhost:5147'}/health`).catch(() => null);
+          if (!errorCheck || !errorCheck.ok) {
+            setFetchError('CORS_ERROR');
+          }
         }
+      } catch (error) {
+        console.error('Error fetching messages:', error);
+        setMessages([]);
+        // Check if it's a CORS error
+        if (error instanceof TypeError && (error.message.includes('fetch') || error.message.includes('CORS'))) {
+          setFetchError('CORS_ERROR');
+        } else {
+          setFetchError('NETWORK_ERROR');
+        }
+      } finally {
+        setLoadingMessages(false);
       }
     };
 
     fetchMessages();
-  }, [negotiationId, supplierId]);
+  }, [negotiationId, supplierId, state]);
 
   const getStatusLabel = (status: string) => {
     switch (status) {
@@ -197,8 +237,9 @@ export default function SupplierDetailPage() {
                     // Default to negotiator if unclear, but prefer supplier if explicitly marked
                     const isFromNegotiator = isNegotiator && !isSupplier;
                     
-                    const messageContent = message.content || message.message || message.text || '';
-                    const timestamp = message.timestamp || message.created_at || message.sent_at || '';
+                    // Backend might return 'message' field instead of 'content'
+                    const messageContent = message.content || message.message || message.text || message.body || '';
+                    const timestamp = message.timestamp || message.created_at || message.sent_at || message.date || '';
                     
                     // Format timestamp
                     const formatTime = (ts: string) => {
@@ -284,12 +325,40 @@ export default function SupplierDetailPage() {
                   <p className="text-sm">{mockConversation.lastMessage}</p>
                 </div>
               </div>
+            ) : fetchError === 'CORS_ERROR' ? (
+              <div className="text-center py-8">
+                <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4 max-w-md mx-auto">
+                  <p className="text-sm font-semibold text-destructive mb-2">CORS Configuration Error</p>
+                  <p className="text-xs text-muted-foreground mb-3">
+                    The backend is not allowing requests from this origin. Please ensure the backend CORS settings include:
+                  </p>
+                  <code className="text-xs bg-muted px-2 py-1 rounded block text-left">
+                    http://localhost:8081
+                  </code>
+                  <p className="text-xs text-muted-foreground mt-3">
+                    Backend needs to be restarted after CORS configuration changes.
+                  </p>
+                </div>
+              </div>
+            ) : fetchError === 'NETWORK_ERROR' ? (
+              <div className="text-center py-8">
+                <div className="bg-destructive/10 border border-destructive/20 rounded-lg p-4 max-w-md mx-auto">
+                  <p className="text-sm font-semibold text-destructive mb-2">Network Error</p>
+                  <p className="text-xs text-muted-foreground">
+                    Could not connect to the backend. Please check if the backend is running.
+                  </p>
+                </div>
+              </div>
             ) : (
               <div className="text-center py-8">
                 <p className="text-sm text-muted-foreground">No conversation messages available</p>
-                {!negotiationId && (
+                {!negotiationId ? (
                   <p className="text-xs text-muted-foreground mt-2">
                     Open this supplier from an active negotiation to see messages
+                  </p>
+                ) : (
+                  <p className="text-xs text-muted-foreground mt-2">
+                    No messages found for this negotiation and supplier
                   </p>
                 )}
               </div>

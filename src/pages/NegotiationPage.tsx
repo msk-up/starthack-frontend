@@ -21,6 +21,7 @@ interface NegotiationState {
   suppliers?: (SupplierWithProducts | Supplier)[];
   negotiationPrompt?: string;
   negotiationTones?: string[];
+  negotiationId?: string | number; // Negotiation ID for fetching messages
   fromHistory?: boolean; // Flag to indicate if coming from history page
 }
 
@@ -33,6 +34,7 @@ export default function NegotiationPage() {
   const suppliersFromState = negotiationState?.suppliers;
   const negotiationPromptFromState = negotiationState?.negotiationPrompt;
   const negotiationTonesFromState = negotiationState?.negotiationTones;
+  const negotiationIdFromState = negotiationState?.negotiationId;
   const fromHistory = negotiationState?.fromHistory || false;
   
   // Convert SupplierWithProducts to Supplier format if needed
@@ -48,8 +50,8 @@ export default function NegotiationPage() {
       }))
     : (() => {
         // Fallback: try URL params (for backward compatibility)
-        const searchParams = new URLSearchParams(location.search);
-        const selectedSupplierIds = searchParams.getAll('supplier');
+  const searchParams = new URLSearchParams(location.search);
+  const selectedSupplierIds = searchParams.getAll('supplier');
         return mockSuppliers.filter((s) => selectedSupplierIds.includes(s.id));
       })();
   
@@ -76,6 +78,13 @@ export default function NegotiationPage() {
   const [loadingNegotiations, setLoadingNegotiations] = useState(true);
   const [resetKey, setResetKey] = useState(0);
   const [currentNegotiationId, setCurrentNegotiationId] = useState<string | number | null>(null);
+
+  // Set currentNegotiationId from state if available (when loading from history)
+  useEffect(() => {
+    if (negotiationIdFromState && !currentNegotiationId) {
+      setCurrentNegotiationId(negotiationIdFromState);
+    }
+  }, [negotiationIdFromState, currentNegotiationId]);
 
   const categorizedSuppliers = selectedSuppliers.filter((s) => s.category === activeCategory);
 
@@ -127,11 +136,11 @@ export default function NegotiationPage() {
       } catch (error) {
         console.error('Error refreshing negotiations:', error);
       }
-      
-      // Simulate processing
-      setTimeout(() => {
-        setIsProcessing(false);
-      }, 5000);
+    
+    // Simulate processing
+    setTimeout(() => {
+      setIsProcessing(false);
+    }, 5000);
     } catch (error) {
       console.error('Error creating negotiation:', error);
       setIsProcessing(false);
@@ -228,14 +237,15 @@ export default function NegotiationPage() {
         };
       });
 
-      // Set the current negotiation ID
-      setCurrentNegotiationId(negotiationId);
+      // Set the current negotiation ID when loading from history
+      setCurrentNegotiationId(negotiation.negotiation_id);
       
       navigate('/negotiation', {
         state: {
           suppliers: mappedSuppliers,
           negotiationPrompt: negotiation.prompt,
           negotiationTones: negotiation.modes || [],
+          negotiationId: negotiation.negotiation_id, // Pass it in state too
         },
       });
     } catch (error) {
@@ -267,14 +277,14 @@ export default function NegotiationPage() {
     <SidebarProvider>
       <div className="min-h-screen w-full flex bg-background">
         {/* Sidebar */}
-          <NegotiationSidebar
-            activeCategory={activeCategory}
-            onCategoryChange={setActiveCategory}
-            supplierCounts={supplierCounts}
+        <NegotiationSidebar
+          activeCategory={activeCategory}
+          onCategoryChange={setActiveCategory}
+          supplierCounts={supplierCounts}
             previousNegotiations={previousNegotiations}
             loadingNegotiations={loadingNegotiations}
             onNegotiationSelect={handleNegotiationSelect}
-          />
+        />
 
         {/* Main Content */}
         <div className="flex-1 flex flex-col">
@@ -283,9 +293,9 @@ export default function NegotiationPage() {
         showBackButton 
         onBackClick={handleStartNewNegotiation}
         rightContent={
-          <Badge variant="secondary" className="px-4 py-2 text-sm font-medium rounded-full">
-            {selectedSuppliers.length} Active Suppliers
-          </Badge>
+            <Badge variant="secondary" className="px-4 py-2 text-sm font-medium rounded-full">
+              {selectedSuppliers.length} Active Suppliers
+            </Badge>
         }
       />
       <div className="border-b bg-background/80 backdrop-blur-sm">
